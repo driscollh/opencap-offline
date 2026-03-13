@@ -9,6 +9,8 @@ dependencies/
 
 # Excluded Files
 python_env.zip
+dependencies.zip
+*.zip
 Start_Pro.bat
 Start_Simple.bat
 Terminal_Only.bat
