@@ -1,0 +1,18 @@
+# Excluded Folders
+Archive/
+output_debug/
+Production Versions/
+python_env/
+Recorded_sessions/
+DebugTools/
+dependencies/
+
+# Excluded Files
+python_env.zip
+Start_Pro.bat
+Start_Simple.bat
+Terminal_Only.bat
+
+# Standard Python background files (good practice to block these)
+__pycache__/
+*.pyc

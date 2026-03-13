@@ -1,0 +1,284 @@
+2026-03-12 11:44:08,007 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:44:08,007 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:44:08,008 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:44:08,053 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:44:08,054 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:44:08,054 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:44:08,054 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 11:44:08,303 - __main__ - INFO - Application started
+2026-03-12 11:44:17,786 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:44:17,788 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:44:17,797 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:44:55,602 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:44:55,602 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:44:55,605 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:44:55,620 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:44:55,620 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:44:55,620 - __main__ - INFO - Created 0 camera slot(s)
+2026-03-12 11:44:55,621 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:44:55,621 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:44:55,621 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:44:55,997 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:44:56,000 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:44:56,001 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:44:56,015 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:44:56,015 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:44:56,015 - __main__ - INFO - Created 0 camera slot(s)
+2026-03-12 11:44:56,015 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:44:56,018 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:44:56,018 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:44:56,141 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:44:56,142 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:44:56,143 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:44:56,160 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:44:56,160 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:44:56,161 - __main__ - INFO - Created 0 camera slot(s)
+2026-03-12 11:44:56,161 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:44:56,162 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:44:56,162 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:45:06,589 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:45:06,590 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:45:06,591 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:45:06,606 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:45:06,606 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:45:06,607 - __main__ - INFO - Created 0 camera slot(s)
+2026-03-12 11:45:06,607 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:45:06,607 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:45:06,607 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:45:06,770 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:45:06,771 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:45:06,771 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:45:06,785 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:45:06,786 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:45:06,787 - __main__ - INFO - Created 0 camera slot(s)
+2026-03-12 11:45:06,787 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:45:06,787 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:45:06,787 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:45:25,663 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:45:25,664 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:45:25,664 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:45:25,679 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:45:25,679 - __main__ - INFO - Found 2 session(s)
+2026-03-12 11:45:25,680 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:45:47,759 - __main__ - INFO - Created new session: Test1
+2026-03-12 11:45:47,762 - __main__ - INFO - SUCCESS: Created session: Test1
+2026-03-12 11:46:13,931 - __main__ - INFO - SUCCESS: Imported trial: intrinsics_1
+2026-03-12 11:46:24,825 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:46:24,826 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:46:24,827 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:46:24,845 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:46:24,845 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:46:24,845 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:46:25,952 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:46:25,953 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:46:25,955 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:47:08,364 - __main__ - INFO - SUCCESS: Imported trial: intrinsics
+2026-03-12 11:47:28,693 - __main__ - INFO - SUCCESS: Imported trial: calibration
+2026-03-12 11:47:47,619 - __main__ - INFO - SUCCESS: Imported trial: neutral
+2026-03-12 11:47:48,776 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:47:48,970 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\neutral\neutral.mp4
+2026-03-12 11:47:48,970 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:48:14,155 - __main__ - INFO - SUCCESS: Imported trial: dyn_1
+2026-03-12 11:48:16,354 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:48:16,552 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:48:16,560 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:48:19,871 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:48:20,069 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:48:20,092 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:51:03,775 - __main__ - INFO - Detected 2 GPU(s)
+2026-03-12 11:53:09,200 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:53:09,395 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\neutral\neutral.mp4
+2026-03-12 11:53:09,417 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:53:15,710 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:53:15,908 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\neutral\neutral.mp4
+2026-03-12 11:53:15,915 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:53:22,648 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:53:22,649 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:53:22,649 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:53:22,666 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:53:22,666 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:53:22,669 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:53:22,679 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:53:22,680 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:53:22,680 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:53:24,599 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:53:24,802 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\neutral\neutral.mp4
+2026-03-12 11:53:24,804 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 11:53:24,899 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:53:26,458 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:53:26,661 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\neutral\neutral.mp4
+2026-03-12 11:53:26,900 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 11:53:26,996 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:53:54,092 - __main__ - INFO - Detected 2 GPU(s)
+2026-03-12 11:58:40,283 - __main__ - INFO - Refreshing sessions
+2026-03-12 11:58:40,283 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 11:58:40,285 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:58:40,300 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 11:58:40,300 - __main__ - INFO - Session changed to: Test1
+2026-03-12 11:58:40,300 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 11:58:40,312 - __main__ - INFO - Loaded session: Test1
+2026-03-12 11:58:40,312 - __main__ - INFO - Found 3 session(s)
+2026-03-12 11:58:40,312 - __main__ - INFO - Sessions refreshed
+2026-03-12 11:58:42,195 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:58:42,399 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:58:42,635 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 11:58:42,726 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:58:43,988 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:58:44,191 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:58:44,476 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:58:50,317 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:58:50,521 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:58:50,527 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 11:58:50,616 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:58:55,935 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:58:56,131 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:58:56,400 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:59:01,155 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:59:01,345 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:59:01,350 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 11:59:01,448 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 11:59:32,318 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 11:59:32,520 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 11:59:32,761 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 11:59:32,883 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 12:00:03,505 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 12:00:03,704 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 12:00:03,946 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 12:00:04,067 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 12:00:42,028 - __main__ - INFO - Application closing
+2026-03-12 14:43:01,410 - __main__ - INFO - Refreshing sessions
+2026-03-12 14:43:01,411 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 14:43:01,412 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 14:43:01,454 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 14:43:01,454 - __main__ - INFO - Found 3 session(s)
+2026-03-12 14:43:01,454 - __main__ - INFO - Sessions refreshed
+2026-03-12 14:43:01,454 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 14:43:01,661 - __main__ - INFO - Application started
+2026-03-12 14:43:03,837 - __main__ - INFO - Application closing
+2026-03-12 14:43:03,863 - root - ERROR - Frame buffer object was not initialized correctly.
+2026-03-12 14:43:03,864 - root - ERROR - The framebuffer is incomplete : FRAMEBUFFER_INCOMPLETE_ATTACHMENT
+2026-03-12 14:43:03,867 - root - ERROR - Frame buffer object was not initialized correctly.
+2026-03-12 14:43:03,868 - root - ERROR - The framebuffer is incomplete : FRAMEBUFFER_INCOMPLETE_ATTACHMENT
+2026-03-12 14:43:03,873 - root - ERROR - Frame buffer object was not initialized correctly.
+2026-03-12 14:43:03,873 - root - ERROR - The framebuffer is incomplete : FRAMEBUFFER_INCOMPLETE_ATTACHMENT
+2026-03-12 14:43:03,876 - root - ERROR - Frame buffer object was not initialized correctly.
+2026-03-12 14:43:03,876 - root - ERROR - The framebuffer is incomplete : FRAMEBUFFER_INCOMPLETE_ATTACHMENT
+2026-03-12 14:44:47,343 - __main__ - INFO - Refreshing sessions
+2026-03-12 14:44:47,343 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 14:44:47,344 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 14:44:47,376 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 14:44:47,376 - __main__ - INFO - Found 3 session(s)
+2026-03-12 14:44:47,376 - __main__ - INFO - Sessions refreshed
+2026-03-12 14:44:47,376 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 14:44:47,575 - __main__ - INFO - Application started
+2026-03-12 14:45:13,396 - __main__ - INFO - Refreshing sessions
+2026-03-12 14:45:13,396 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 14:45:13,396 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 14:45:13,430 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 14:45:13,430 - __main__ - INFO - Found 3 session(s)
+2026-03-12 14:45:13,430 - __main__ - INFO - Sessions refreshed
+2026-03-12 14:45:13,430 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 14:45:13,642 - __main__ - INFO - Application started
+2026-03-12 14:45:16,609 - __main__ - INFO - Session changed to: Test1
+2026-03-12 14:45:16,612 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 14:45:16,625 - __main__ - INFO - Loaded session: Test1
+2026-03-12 14:45:17,664 - __main__ - INFO - Refreshing sessions
+2026-03-12 14:45:17,664 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 14:45:17,669 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 14:45:17,683 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 14:45:17,683 - __main__ - INFO - Session changed to: Test1
+2026-03-12 14:45:17,685 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 14:45:17,698 - __main__ - INFO - Loaded session: Test1
+2026-03-12 14:45:17,698 - __main__ - INFO - Found 3 session(s)
+2026-03-12 14:45:17,698 - __main__ - INFO - Sessions refreshed
+2026-03-12 14:45:21,018 - __main__ - INFO - Application closing
+2026-03-12 16:12:31,069 - __main__ - INFO - Refreshing sessions
+2026-03-12 16:12:31,069 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 16:12:31,071 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:12:31,117 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 16:12:31,117 - __main__ - INFO - Found 3 session(s)
+2026-03-12 16:12:31,117 - __main__ - INFO - Sessions refreshed
+2026-03-12 16:12:31,117 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 16:12:31,351 - __main__ - INFO - Application started
+2026-03-12 16:16:49,239 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:16:49,439 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\ROI_1\Videos\Cam1\InputMedia\walking_2\walking_2.mp4
+2026-03-12 16:16:49,440 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:17:33,947 - __main__ - INFO - Session changed to: Test1
+2026-03-12 16:17:33,950 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:17:33,962 - __main__ - INFO - Loaded session: Test1
+2026-03-12 16:18:03,744 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:18:03,940 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 16:18:03,955 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 16:18:04,083 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:18:42,671 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:18:42,862 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\intrinsics\intrinsics_0.MOV
+2026-03-12 16:18:43,221 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:19:07,164 - __main__ - INFO - Refreshing sessions
+2026-03-12 16:19:07,165 - __main__ - INFO - Session changed to: ROI_1
+2026-03-12 16:19:07,165 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:19:07,196 - __main__ - INFO - Loaded session: ROI_1
+2026-03-12 16:19:07,196 - __main__ - INFO - Found 3 session(s)
+2026-03-12 16:19:07,197 - __main__ - INFO - Sessions refreshed
+2026-03-12 16:19:07,197 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 16:19:07,431 - __main__ - INFO - Application started
+2026-03-12 16:19:51,097 - __main__ - INFO - Session changed to: Test1
+2026-03-12 16:19:51,098 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:19:51,110 - __main__ - INFO - Loaded session: Test1
+2026-03-12 16:20:20,234 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:20:20,428 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\intrinsics\intrinsics_0.MOV
+2026-03-12 16:20:20,428 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:25:07,875 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:25:08,065 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\calibration\calibration.MOV
+2026-03-12 16:25:08,124 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:25:16,598 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:25:16,800 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\neutral\neutral.mp4
+2026-03-12 16:25:16,815 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:25:17,409 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:25:17,611 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\neutral\neutral.mp4
+2026-03-12 16:25:17,620 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 16:25:17,722 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:25:24,714 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:25:24,909 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam0\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 16:25:25,211 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 16:25:25,309 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:26:41,149 - __main__ - INFO - Created new session: Demo_2
+2026-03-12 16:26:41,153 - __main__ - INFO - SUCCESS: Created session: Demo_2
+2026-03-12 16:26:42,064 - __main__ - INFO - Refreshing sessions
+2026-03-12 16:26:42,064 - __main__ - INFO - Session changed to: Demo_2
+2026-03-12 16:26:42,066 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:26:42,067 - __main__ - INFO - Loaded session: Demo_2
+2026-03-12 16:26:42,068 - __main__ - INFO - Session changed to: Test1
+2026-03-12 16:26:42,068 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:26:42,080 - __main__ - INFO - Loaded session: Test1
+2026-03-12 16:26:42,080 - __main__ - INFO - Found 4 session(s)
+2026-03-12 16:26:42,081 - __main__ - INFO - Sessions refreshed
+2026-03-12 16:26:43,430 - __main__ - INFO - Session changed to: Demo_2
+2026-03-12 16:26:43,431 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:26:43,433 - __main__ - INFO - Loaded session: Demo_2
+2026-03-12 16:27:25,227 - __main__ - INFO - SUCCESS: Imported trial: intrinsics
+2026-03-12 16:32:34,683 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:32:34,877 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Demo_2\Videos\Cam0\InputMedia\intrinsics\intrinsics_0.MOV
+2026-03-12 16:32:35,236 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:49:59,496 - __main__ - INFO - Session changed to: Test1
+2026-03-12 16:49:59,498 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:49:59,510 - __main__ - INFO - Loaded session: Test1
+2026-03-12 16:50:01,723 - __main__ - WARNING - WARNING: Loading media...
+2026-03-12 16:50:01,925 - __main__ - INFO - Loading media from path: C:\Users\user\Documents\Opencap\opencap-portable\Data\Test1\Videos\Cam1\InputMedia\dyn_1\dyn_1.mp4
+2026-03-12 16:50:01,937 - __main__ - INFO - Skeleton Loaded: 20 markers. 29 segments.
+2026-03-12 16:50:02,071 - __main__ - INFO - SUCCESS: Media loaded successfully.
+2026-03-12 16:56:26,441 - __main__ - INFO - Refreshing sessions
+2026-03-12 16:56:26,441 - __main__ - INFO - Session changed to: Demo_2
+2026-03-12 16:56:26,443 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:56:26,477 - __main__ - INFO - Loaded session: Demo_2
+2026-03-12 16:56:26,478 - __main__ - INFO - Found 4 session(s)
+2026-03-12 16:56:26,478 - __main__ - INFO - Sessions refreshed
+2026-03-12 16:56:26,478 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 16:56:26,708 - __main__ - INFO - Application started
+2026-03-12 16:56:38,259 - __main__ - INFO - Refreshing sessions
+2026-03-12 16:56:38,259 - __main__ - INFO - Session changed to: Demo_2
+2026-03-12 16:56:38,260 - __main__ - INFO - Created 2 camera slot(s)
+2026-03-12 16:56:38,279 - __main__ - INFO - Loaded session: Demo_2
+2026-03-12 16:56:38,279 - __main__ - INFO - Found 4 session(s)
+2026-03-12 16:56:38,279 - __main__ - INFO - Sessions refreshed
+2026-03-12 16:56:38,279 - __main__ - INFO - OpenCap Portable Pro initialized
+2026-03-12 16:56:38,494 - __main__ - INFO - Application started
