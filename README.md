@@ -4,11 +4,11 @@ A fully offline, localized implementation of Stanford NMBL's OpenCap. This versi
 This version of the software requires a sufficiently powerful GPU, but cannot run on blackwell architecture cards (i.e. Nvidia 50-series cards). 
 We recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graphics ram.
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
+
 ## Prerequisites
 * Python 3.9.25
 * Git
-
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/your_bmac_username)
 
 ## Installation & Setup
 
