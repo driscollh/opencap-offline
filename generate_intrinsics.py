@@ -87,12 +87,15 @@ def calibrate_session(session_name):
             print(f"  [SKIP] No videos found in {input_dir}")
             continue
 
-        model_name = get_iphone_model(video_files[0])
-        print(f"  [INFO] Detected Model: {model_name}")
+        raw_model_name = get_iphone_model(video_files[0])
         
-        # Store model in metadata
+        # FIX: Append the camera name to prevent overwriting identical models
+        unique_model_name = f"{raw_model_name}_{cam_name}"
+        print(f"  [INFO] Detected Model: {raw_model_name} (Saving as {unique_model_name})")
+        
+        # Store unique model in metadata so main.py knows exactly which one to grab
         if 'iphoneModel' not in meta: meta['iphoneModel'] = {}
-        meta['iphoneModel'][cam_name] = model_name
+        meta['iphoneModel'][cam_name] = unique_model_name
 
         imgpoints, objpoints = [], []
         final_size = None
@@ -144,7 +147,7 @@ def calibrate_session(session_name):
             pickle.dump(data, f)
         
         # Save to global library
-        lib_folder = os.path.join(library_path, model_name)
+        lib_folder = os.path.join(library_path, unique_model_name) # <--- Change model_name to unique_model_name
         os.makedirs(lib_folder, exist_ok=True)
         lib_save = os.path.join(lib_folder, "cameraIntrinsics.pickle")
         with open(lib_save, 'wb') as f:

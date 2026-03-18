@@ -2120,6 +2120,12 @@ class OpenCapPro(QMainWindow):
         self.tree.setFixedWidth(Config.TREE_WIDTH)
         self.tree.itemClicked.connect(self.on_tree_click)
         self.tree.setToolTip("Click trial to load video and 3D visualization")
+
+        # --- NEW: Enable Right-Click Context Menu ---
+        self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self._show_tree_context_menu)
+        # --------------------------------------------
+        
         self.splitter.addWidget(self.tree)
         
         # Center: 3D viewer
@@ -2389,23 +2395,25 @@ class OpenCapPro(QMainWindow):
                     trial_item.setIcon(0, self.style().standardIcon(QStyle.SP_DirIcon))
                     cam_item.addChild(trial_item)
                     
-                    # 4. Get the raw video path (needed for the left-hand player)
-                    videos = [f for f in trial_path.iterdir() if f.suffix.lower() in Config.VIDEO_EXTENSIONS]
+                    # 4. Get the raw video paths
+                    videos = sorted([f for f in trial_path.iterdir() if f.suffix.lower() in Config.VIDEO_EXTENSIONS])
                     if not videos:
                         continue
                         
+                    # We keep the first video path as a fallback for the overlay mapping below
                     raw_vid_path = str(videos[0])
                     
-                    # 5. Add a "Raw Only" clickable item
-                    raw_item = QTreeWidgetItem([f"Raw Video: {videos[0].name}"])
-                    raw_item.setIcon(0, self.style().standardIcon(QStyle.SP_FileIcon))
-                    raw_item.setData(0, Qt.UserRole, {
-                        "type": "video",
-                        "path": raw_vid_path,
-                        "overlay": None,
-                        "trc": None
-                    })
-                    trial_item.addChild(raw_item)
+                    # 5. Add a "Raw Only" clickable item for EVERY video found
+                    for vid in videos:
+                        raw_item = QTreeWidgetItem([f"Raw Video: {vid.name}"])
+                        raw_item.setIcon(0, self.style().standardIcon(QStyle.SP_FileIcon))
+                        raw_item.setData(0, Qt.UserRole, {
+                            "type": "video",
+                            "path": str(vid),
+                            "overlay": None,
+                            "trc": None
+                        })
+                        trial_item.addChild(raw_item)
                     
                     # 6. Add a clickable item for EVERY resolution it finds!
                     for out_folder in output_candidates:
@@ -2517,7 +2525,7 @@ class OpenCapPro(QMainWindow):
             )
     
     def run_import(self) -> None:
-        """Execute trial import with proper sanitization and renaming"""
+        """Execute trial import with proper sanitization and conflict resolution"""
         session = self.session_combo.currentText()
         trial_name = self.trial_name_edit.text().strip()
 
@@ -2527,41 +2535,66 @@ class OpenCapPro(QMainWindow):
             QMessageBox.warning(self, "Input Error", "Ensure session is selected, trial is named, and files are browsed.")
             return
 
-        # 2. Sanitize and Handle Conflicts
-        safe_name = InputValidator.sanitize_trial_name(trial_name)
-        dest_root = self.data_dir / session / "Videos" / "Cam0" / "InputMedia"
-        final_name = safe_name
-        counter = 1
+        # 2. Sanitize Name
+        final_name = InputValidator.sanitize_trial_name(trial_name)
         
-        while (dest_root / final_name).exists():
-            final_name = f"{safe_name}_{counter}"
-            counter += 1
+        # 3. Check for Existing Files (Conflict Resolution)
+        conflict_found = False
+        for cam, data in self.cam_buttons.items():
+            if data.get("paths"):
+                cam_dest_dir = self.data_dir / session / "Videos" / cam / "InputMedia" / final_name
+                if cam_dest_dir.exists() and any(f.suffix.lower() in Config.VIDEO_EXTENSIONS for f in cam_dest_dir.iterdir() if f.is_file()):
+                    conflict_found = True
+                    break
         
-        # 3. Perform Import with Renaming
+        overwrite_all = False
+        suffix_mode = False
+        
+        if conflict_found:
+            reply = QMessageBox.question(
+                self, 
+                "Folder Already Exists", 
+                f"Videos already exist in the '{final_name}' folder.\n\nDo you want to overwrite them?\n\n• Yes: Delete old videos and replace.\n• No: Keep old videos and append a suffix (_1, _2) to the new ones.",
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                QMessageBox.Cancel
+            )
+            
+            if reply == QMessageBox.Cancel:
+                return
+            elif reply == QMessageBox.Yes:
+                overwrite_all = True
+            else:
+                suffix_mode = True
+
+        # 4. Perform Import
         try:
             files_copied = 0
             for cam, data in self.cam_buttons.items():
-                # Check if this camera has any staged paths
                 if data.get("paths"):
+                    dest_dir = self.data_dir / session / "Videos" / cam / "InputMedia" / final_name
+                    dest_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Clear existing videos if overwriting so we don't mix .mov and .mp4
+                    if overwrite_all:
+                        for f in dest_dir.iterdir():
+                            if f.is_file() and f.suffix.lower() in Config.VIDEO_EXTENSIONS:
+                                f.unlink()
+                                
                     for idx, file_path in enumerate(data["paths"]):
                         source = Path(file_path)
-                    
-                        # 1. Create the trial folder (e.g., Data/Session/Videos/Cam0/InputMedia/intrinsics)
-                        dest_dir = self.data_dir / session / "Videos" / cam / "InputMedia" / final_name
-                        dest_dir.mkdir(parents=True, exist_ok=True)
-                    
-                        # 2. Handle Filename: Add index only if there are multiple files for this camera
                         extension = source.suffix
-                        if len(data["paths"]) > 1:
-                            # Result: intrinsics_0.mp4, intrinsics_1.mp4, etc.
-                            new_filename = f"{final_name}_{idx}{extension}"
+                        
+                        base_filename = f"{final_name}_{idx}" if len(data["paths"]) > 1 else final_name
+                        
+                        if suffix_mode:
+                            counter = 1
+                            dest_file = dest_dir / f"{base_filename}_{counter}{extension}"
+                            while dest_file.exists():
+                                counter += 1
+                                dest_file = dest_dir / f"{base_filename}_{counter}{extension}"
                         else:
-                            # Result: intrinsics.mp4
-                            new_filename = f"{final_name}{extension}"
-                    
-                        dest_file = dest_dir / new_filename
-                    
-                        # 3. Copy and rename
+                            dest_file = dest_dir / f"{base_filename}{extension}"
+                            
                         shutil.copy(str(source), str(dest_file))
                         files_copied += 1
             
@@ -2572,40 +2605,7 @@ class OpenCapPro(QMainWindow):
         except Exception as e:
             logger.error(f"Import failed: {e}", exc_info=True)
             QMessageBox.critical(self, "Error", f"Import failed: {str(e)}")
-            
             self.refresh_tree(session)
-            self._update_status(f"Imported trial: {final_name}", success=True)
-            
-        except PermissionError as e:
-            logger.error(f"Permission error during import: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                "Permission Denied",
-                f"Unable to write to destination directory.\n\n"
-                f"Details: {str(e)}\n\n"
-                f"Please check folder permissions and try again."
-            )
-        except IOError as e:
-            logger.error(f"I/O error during import: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                "File I/O Error",
-                f"An error occurred while copying files.\n\n"
-                f"Details: {str(e)}\n\n"
-                f"Please verify:\n"
-                f"• Source files are accessible\n"
-                f"• Sufficient disk space available\n"
-                f"• No files are locked by other programs"
-            )
-        except Exception as e:
-            logger.error(f"Unexpected error during import: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                "Import Failed",
-                f"An unexpected error occurred during import.\n\n"
-                f"Error: {str(e)}\n\n"
-                f"Please report this issue if it persists."
-            )
     
     # -------------------------------------------------------------------------
     # PIPELINE EXECUTION
@@ -2820,8 +2820,13 @@ class OpenCapPro(QMainWindow):
                 yaml.dump(metadata, f, default_flow_style=False, sort_keys=False)
             
             logger.info(f"Created new session: {data['name']}")
-            self.refresh_tree(data['name'])
+            
+            # 1. Rescan the hard drive so the dropdown knows the new folder exists
+            self.refresh_sessions()
+            
+            # 2. Force the dropdown to select it (This automatically triggers the tree & camera slots to refresh!)
             self.session_combo.setCurrentText(data['name'])
+            
             self._update_status(f"Created session: {data['name']}", success=True)
             
         except Exception as e:
@@ -2915,6 +2920,106 @@ class OpenCapPro(QMainWindow):
     # WINDOW EVENTS
     # -------------------------------------------------------------------------
     
+    def _show_tree_context_menu(self, position):
+        """Displays a right-click menu for tree items."""
+        item = self.tree.itemAt(position)
+        if not item: return
+            
+        data = item.data(0, Qt.UserRole)
+        if not data or data.get("type") != "video": return 
+            
+        menu = QMenu()
+        
+        # --- NEW RENAME ACTION ---
+        rename_action = QAction("Rename File", self)
+        rename_action.triggered.connect(lambda: self._rename_tree_file(data["path"]))
+        menu.addAction(rename_action)
+        
+        # --- EXISTING DELETE ACTION ---
+        delete_action = QAction("Delete File", self)
+        delete_action.triggered.connect(lambda: self._delete_tree_file(data["path"]))
+        menu.addAction(delete_action)
+        
+        menu.exec_(self.tree.viewport().mapToGlobal(position))
+
+    def _delete_tree_file(self, file_path):
+        """Deletes the file from the hard drive and updates the GUI."""
+        file_name = os.path.basename(file_path)
+        
+        # 1. Ask for confirmation before destroying data
+        reply = QMessageBox.question(
+            self, 
+            "Confirm Delete", 
+            f"Are you sure you want to permanently delete this file?\n\n{file_name}",
+            QMessageBox.Yes | QMessageBox.No, 
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            try:
+                # 2. Delete from the hard drive
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    self.log_box.append(f">>> DELETED: {file_path}")
+                    
+                    # 3. Clear the video player if they were currently watching the deleted video
+                    if self.pending_click_data and self.pending_click_data.get("path") == file_path:
+                        self.video_player.stop()
+                        self.video_player.raw_label.clear()
+                        self.video_player.overlay_label.clear()
+                        self.skeleton_viewer.clear_skeleton()
+                    
+                    # 4. Refresh the tree so the file disappears from the UI
+                    session = self.session_combo.currentText()
+                    self.refresh_tree(session)
+                    self._update_status(f"Deleted {file_name}", success=True)
+                    
+            except Exception as e:
+                logger.error(f"Failed to delete file: {e}")
+                QMessageBox.critical(self, "Error", f"Could not delete file:\n{e}")
+
+    def _rename_tree_file(self, file_path):
+        """Renames a file directly from the right-click menu."""
+        # We import QInputDialog here dynamically since it wasn't in your top imports
+        from PyQt5.QtWidgets import QInputDialog, QLineEdit
+        
+        old_path = Path(file_path)
+        old_name = old_path.name
+        
+        new_name, ok = QInputDialog.getText(
+            self, 
+            "Rename File", 
+            "Enter new file name (including extension):", 
+            QLineEdit.Normal, 
+            old_name
+        )
+        
+        if ok and new_name and new_name != old_name:
+            new_path = old_path.parent / new_name
+            
+            if new_path.exists():
+                QMessageBox.warning(self, "Error", "A file with that name already exists in this folder.")
+                return
+                
+            try:
+                # 1. Clear the video player just in case they are currently watching the file they are renaming
+                if self.pending_click_data and self.pending_click_data.get("path") == file_path:
+                    self.video_player.stop()
+                    self.video_player.raw_label.clear()
+                    
+                # 2. Rename it on the hard drive
+                old_path.rename(new_path)
+                self.log_box.append(f">>> RENAMED: {old_name} -> {new_name}")
+                
+                # 3. Refresh the UI
+                session = self.session_combo.currentText()
+                self.refresh_tree(session)
+                self._update_status(f"Renamed to {new_name}", success=True)
+                
+            except Exception as e:
+                logger.error(f"Failed to rename file: {e}")
+                QMessageBox.critical(self, "Error", f"Could not rename file:\n{e}")
+
     def closeEvent(self, event) -> None:
         """Handle window close event"""
         # Save window state

@@ -229,10 +229,12 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
                          if os.path.exists(calib_vid): full_video_path = calib_vid
                     
                     if os.path.exists(full_video_path):
-                        phoneName = get_iphone_model_from_metadata(full_video_path)
+                        raw_phone = get_iphone_model_from_metadata(full_video_path)
+                        # FIX: Apply the same _CamX suffix so it matches the custom library folder
+                        phoneName = f"{raw_phone}_{camName}" 
                         cameraModels[camName] = phoneName 
                     else:
-                        phoneName = "iPhone12"
+                        phoneName = f"iPhone12_{camName}" # Fallback
 
                 localIntrinsicFile = os.path.join(camDir, 'cameraIntrinsics.pickle')
                 customIntrinsicPath = os.path.join(baseDir, 'CustomCameraIntrinsics', phoneName, 'cameraIntrinsics.pickle')
