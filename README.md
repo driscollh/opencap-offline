@@ -8,6 +8,8 @@ We recommend use with Nvidia 30-series or 40-series cards with minimum 12GB grap
 * Python 3.9.25
 * Git
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/your_bmac_username)
+
 ## Installation & Setup
 
 **1. Download the Code**
