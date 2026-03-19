@@ -1427,14 +1427,21 @@ class PipelineConfigDialog(QDialog):
             if d.is_dir()
         ]
         
-        for trial_name in sorted(trials):
-            # Skip calibration trials
-            if trial_name.lower() in ["intrinsics", "calibration"]:
-                continue
-            
+        # 1. Filter out calibration trials
+        valid_trials = [t for t in trials if t.lower() not in ["intrinsics", "calibration"]]
+        
+        # 2. Custom Sort: Force 'neutral' to the top (Priority 0), then sort the rest alphabetically (Priority 1)
+        sorted_trials = sorted(valid_trials, key=lambda x: (0 if x.lower() == 'neutral' else 1, x.lower()))
+        
+        for trial_name in sorted_trials:
             checkbox = QCheckBox(trial_name)
             checkbox.setChecked(True)
             checkbox.setToolTip(f"Process trial: {trial_name}")
+            
+            # Make the neutral trial bold so it stands out as the anchor trial
+            if trial_name.lower() == 'neutral':
+                checkbox.setStyleSheet("font-weight: bold;")
+                
             self.trial_layout.addWidget(checkbox)
             self.checks[trial_name] = checkbox
         
