@@ -1702,13 +1702,12 @@ class OpenCapPro(QMainWindow):
         self.data_dir.mkdir(exist_ok=True)
         self.script_path = self.app_path / "reprocessOffline.py"
 
-        # --- FIX 1: SET APP ICON ---
+        # SET APP ICON
         icon_path = self.app_path / "app_icon.png"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
-        # ---------------------------
         
-        # Initialize settings
+        # Initialize settings (Use ONE consistent registry key)
         self.settings = QSettings('OpenCap', 'LauncherPro')
         
         # Initialize process
@@ -1716,11 +1715,10 @@ class OpenCapPro(QMainWindow):
         
         # Setup window
         self.setWindowTitle("OpenCap Portable Pro")
-        #self.setStyleSheet(Styles.LIGHT)
 
-        # Initialize settings and apply theme BEFORE creating UI
-        self.settings = QSettings("OpenCap", "Launcher")
-        saved_theme = self.settings.value('theme', 'dark') # Default to dark
+        # --- UNIFIED THEME LOADING ---
+        # Default to dark mode for fresh installs
+        saved_theme = self.settings.value('theme', 'dark') 
         
         if saved_theme == 'dark':
             self.setStyleSheet(Styles.DARK)
@@ -1729,34 +1727,25 @@ class OpenCapPro(QMainWindow):
             self.setStyleSheet(Styles.LIGHT)
             self.current_theme = 'light'
         
-        # Build UI
+        # Build UI (Now everything will inherit the correct theme from the start)
         self._init_ui()
         self._setup_shortcuts()
         self._restore_geometry()
-
-        # --- FIX 7: RESTORE THEME ---
-        saved_theme = self.settings.value('theme', 'light')
-        if saved_theme == 'light':
-            self.setStyleSheet(Styles.LIGHT)
-            self.current_theme = 'light'
-            # Use a small timer or direct call to ensure the interactor is ready
-            if hasattr(self, 'skeleton_viewer'):
-                self.skeleton_viewer.set_background("#e0e0e0") 
-        else:
-            self.setStyleSheet(Styles.DARK)
-            self.current_theme = 'dark'
-            if hasattr(self, 'skeleton_viewer'):
-                self.skeleton_viewer.set_background(Colors.BG)
+        
+        # Ensure 3D viewer background matches the loaded theme
+        if self.current_theme == 'light' and hasattr(self, 'skeleton_viewer'):
+            self.skeleton_viewer.set_background("#e0e0e0")
+        elif self.current_theme == 'dark' and hasattr(self, 'skeleton_viewer'):
+            self.skeleton_viewer.set_background(Colors.BG)
         
         # Initial data load
         self.cam_buttons: Dict[str, Dict[str, Any]] = {}
 
-        # --- NEW DEBOUNCE TIMER ---
+        # DEBOUNCE TIMER
         self.tree_click_timer = QTimer()
         self.tree_click_timer.setSingleShot(True)
         self.tree_click_timer.timeout.connect(self._execute_tree_click)
         self.pending_click_data = None
-        # --------------------------
 
         self.refresh_sessions()
         
@@ -2327,7 +2316,26 @@ class OpenCapPro(QMainWindow):
         logger.info(f"Cleared selection for {camera}")
     
     def refresh_tree(self, session_name: str):
+        # --- 1. SAVE EXPANSION STATE ---
+        expanded_paths = set()
+        
+        # Helper function to recursively record which folders are open
+        def save_state(item, current_path):
+            path = f"{current_path}/{item.text(0)}" if current_path else item.text(0)
+            if item.isExpanded():
+                expanded_paths.add(path)
+            for i in range(item.childCount()):
+                save_state(item.child(i), path)
+                
+        # Only save state if the tree actually has items in it
+        was_populated = self.tree.topLevelItemCount() > 0
+        if was_populated:
+            for i in range(self.tree.topLevelItemCount()):
+                save_state(self.tree.topLevelItem(i), "")
+
+        # Now we can safely clear the tree
         self.tree.clear()
+        
         video_root = self.data_dir / session_name / "Videos"
         if not video_root.exists(): return
         
@@ -2367,13 +2375,9 @@ class OpenCapPro(QMainWindow):
                     trc_path = None # Initialize here
                     
                     for out_folder in output_candidates:
-                        # Extract the resolution string (e.g. from "OutputVideos_1x736" -> "1x736")
                         res_string = out_folder.replace("OutputVideos_", "").replace("OutputMedia_", "")
                         
-                        # 1. Dynamically build the TRC path based on the video's resolution!
                         potential_trc = self.data_dir / session_name / "MarkerData" / f"OpenPose_{res_string}" / "PreAugmentation" / f"{trial_name}.trc"
-                        
-                        # Construct the EXACT video path
                         exact_vid_path = cam_root / out_folder / trial_name / f"{trial_name}_overlay.avi"
                         
                         if exact_vid_path.exists():
@@ -2381,7 +2385,6 @@ class OpenCapPro(QMainWindow):
                             trc_path = str(potential_trc) if potential_trc.exists() else None
                             break
                         else:
-                            # Fallback: Just in case it saved as .mp4 instead of .avi
                             search_dir = cam_root / out_folder / trial_name
                             if search_dir.exists():
                                 overlays = [f for f in search_dir.iterdir() if f.suffix.lower() in Config.OVERLAY_EXTENSION]
@@ -2400,7 +2403,6 @@ class OpenCapPro(QMainWindow):
                     if not videos:
                         continue
                         
-                    # We keep the first video path as a fallback for the overlay mapping below
                     raw_vid_path = str(videos[0])
                     
                     # 5. Add a "Raw Only" clickable item for EVERY video found
@@ -2418,28 +2420,34 @@ class OpenCapPro(QMainWindow):
                     # 6. Add a clickable item for EVERY resolution it finds!
                     for out_folder in output_candidates:
                         res_string = out_folder.replace("OutputVideos_", "").replace("OutputMedia_", "")
-                        
-                        # Build dynamic paths based on this specific resolution
                         exact_vid_path = cam_root / out_folder / trial_name / f"{trial_name}_overlay.avi"
-                        
-                        # Decide here if you want Pre or Post augmentation
                         potential_trc = self.data_dir / session_name / "MarkerData" / f"OpenPose_{res_string}" / "PreAugmentation" / f"{trial_name}.trc"
                         
                         if exact_vid_path.exists():
-                            # Create a specific tree item for this resolution
                             proc_item = QTreeWidgetItem([f"Overlay: {res_string}"])
                             proc_item.setIcon(0, self.style().standardIcon(QStyle.SP_MediaPlay))
-                            
-                            # Bind the specific TRC and Overlay to this item
                             proc_item.setData(0, Qt.UserRole, {
                                 "type": "video",
-                                "path": raw_vid_path,          # Left video (Raw)
-                                "overlay": str(exact_vid_path),# Right video (This specific overlay)
+                                "path": raw_vid_path,
+                                "overlay": str(exact_vid_path),
                                 "trc": str(potential_trc) if potential_trc.exists() else None
                             })
                             trial_item.addChild(proc_item)
                         
+            # Set default expansion for first-time loads
             cam_item.setExpanded(True)
+            
+        # --- 2. RESTORE EXPANSION STATE ---
+        # If the tree had items before we refreshed, re-apply the user's specific state
+        if was_populated:
+            def restore_state(item, current_path):
+                path = f"{current_path}/{item.text(0)}" if current_path else item.text(0)
+                item.setExpanded(path in expanded_paths)
+                for i in range(item.childCount()):
+                    restore_state(item.child(i), path)
+                    
+            for i in range(self.tree.topLevelItemCount()):
+                restore_state(self.tree.topLevelItem(i), "")
             
         # Scroll log to bottom so you see the latest check
         sb = self.log_box.verticalScrollBar()
