@@ -13,32 +13,54 @@ import yaml
 import argparse
 import traceback
 
+# --- DYNAMIC CONFIGURATION (Argparse for GUI Inputs) -----------------------
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--session", required=True)
+    parser.add_argument("--gpu_index", default="0")
+    parser.add_argument("--resolution", default="1x736")
+    parser.add_argument("--trials", nargs='+', required=True)
+    parser.add_argument("--step", default="all")
+    
+    # --- DYNAMIC DLC CHECK ---
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    dlc_path = os.path.join(base_dir, "Blackwell_RTMPose")
+    
+    # Force RTMPose to be universally unlocked for the RTX 3060
+    pose_choices = ["openpose", "rtmpose"]
+    print("[SYSTEM] RTX 3060 Mode: RTMPose Globally Unlocked.")
+
+    parser.add_argument("--pose_estimator", default="openpose", choices=pose_choices)
+    return parser.parse_args()
+
+args = get_args()
+
 # Get the absolute path to your portable folder
 base_path = os.path.dirname(os.path.abspath(__file__))
 
-# Define the hidden path where your DLLs actually live
-dll_path = os.path.join(base_path, 'python_env', 'Library', 'bin')
+# --- STRICT DLL ISOLATION ---
+if args.gpu_index == "0":
+    target_env = "python_env_5060"
+else:
+    target_env = "python_env"
+
+# Use the full absolute path
+dll_path = os.path.abspath(os.path.join(base_path, target_env, 'Library', 'bin'))
 
 if os.path.exists(dll_path):
-    print(f"[GPU CONFIG] Found CUDA libraries at: {dll_path}")
-    # This is the critical line for Windows 10/11
+    print(f"[GPU CONFIG] Target Card: {args.gpu_index} | Forcing DLLs from: {target_env}")
+    # Clear the PATH variable to ensure NO other CUDA versions interfere
+    os.environ['PATH'] = dll_path + os.pathsep + os.environ['PATH']
+    # Force Windows to use THIS directory for the 5060 process
     os.add_dll_directory(dll_path)
-else:
-    print(f"[WARNING] Could not find DLL folder at {dll_path}")
+
+# Force the environment variable for the subprocesses to use the correct card
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_index
 
 # Force TensorFlow to see the local path for any legacy subprocesses
 os.environ['PATH'] = dll_path + os.pathsep + os.environ['PATH']
 
-# --- DYNAMIC CONFIGURATION (Argparse for GUI Inputs) -----------------------
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--session", required=True, help="Session folder name in Data/")
-    parser.add_argument("--gpu_index", default="0", help="CUDA device index")
-    parser.add_argument("--resolution", default="1x736", help="Net resolution for OpenPose")
-    parser.add_argument("--trials", nargs='+', required=True, help="List of trials from GUI")
-    return parser.parse_args()
 
-args = get_args()
 
 # --- REPLICATED CONSTANTS & OVERRIDES -----------------------------
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_index
@@ -275,10 +297,11 @@ def sanitize_video_file(session_path, trial_name):
                 print(f"    [ERROR] FFmpeg failed. Restoring backup.")
                 shutil.move(backup_path, raw_vid)
 
-def generate_neutral_thumbnails(session_path, trial_name):
+def generate_neutral_thumbnails(session_path, trial_name, res_override): # Add res_override
     if trial_name != 'neutral': return
     print(f"\n--- [Helper] Generating Neutral Pose Thumbnails ---")
-    thumb_dir = os.path.join(session_path, 'NeutralPoseImages')
+    # FIX: Add the resolution to the path
+    thumb_dir = os.path.join(session_path, 'NeutralPoseImages', res_override)
     os.makedirs(thumb_dir, exist_ok=True)
     
     vid_dir = os.path.join(session_path, 'Videos')
@@ -296,7 +319,7 @@ def generate_neutral_thumbnails(session_path, trial_name):
             cv2.imwrite(out_path, frame)
             print(f"    [OK] Saved {out_path}")
 
-def run_openpose_direct(session_path, trial_name, res_override):
+def run_openpose_direct(session_path, trial_name, pose_folder_name):
     print(f"\n--- [Step 2/3] Running OpenPose ---")
     bin_path = os.path.join(OPENPOSE_ROOT_DIR, 'bin', 'OpenPoseDemo.exe')
     for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
@@ -306,11 +329,9 @@ def run_openpose_direct(session_path, trial_name, res_override):
             print(f"    [SKIP] No video found for {os.path.basename(cf)}")
             continue
             
-        json_out = os.path.join(cf, f'OutputJsons_{res_override}', trial_name)
+        json_out = os.path.join(cf, f'OutputJsons_{pose_folder_name}', trial_name)
         os.makedirs(json_out, exist_ok=True)
-        
-        # Output overlay video folder
-        video_out_dir = os.path.join(cf, f'OutputVideos_{res_override}', trial_name)
+        video_out_dir = os.path.join(cf, f'OutputMedia_{pose_folder_name}', trial_name)
         os.makedirs(video_out_dir, exist_ok=True)
         video_out_path = os.path.join(video_out_dir, f"{trial_name}_overlay.avi")
         
@@ -324,16 +345,16 @@ def run_openpose_direct(session_path, trial_name, res_override):
             '--num_gpu_start', str(OPENPOSE_GPU_START)
         ]
 
+        # Use the resolution string from the folder name
+        res_override = pose_folder_name.split('_')[-1]
+
         if res_override != 'default':
-            # 1. Parse base resolution (e.g. "1x736")
             base_res = res_override.split('_')[0]
             cmd.extend(['--net_resolution', f"-{base_res}"])
-            
-            # 2. Check for multi-scale request (e.g. "_2scales")
             if '_2scales' in res_override:
                 print(f"    [CONFIG] Enabling 2-Scale Processing (High Accuracy)")
                 cmd.extend(['--scale_number', '2', '--scale_gap', '0.75'])
-            elif '_4scales' in res_override: # If you ever want extreme accuracy
+            elif '_4scales' in res_override:
                 cmd.extend(['--scale_number', '4', '--scale_gap', '0.25'])
             
         try: 
@@ -343,11 +364,11 @@ def run_openpose_direct(session_path, trial_name, res_override):
         except: 
             print(f"   [ERROR] OpenPose Crashed on {os.path.basename(cf)}")
 
-def generate_missing_pickles(session_path, trial_name, res_override, is_static=False):
-    print(f"\n--- [Step 3/3] Helper Files (Static Freeze: {is_static}) ---")
+def generate_missing_pickles(session_path, trial_name, pose_folder_name, is_static=False, pose_estimator="openpose"):
+    print(f"\n--- [Step 3/3] Helper Files (Source: {pose_estimator.upper()}, Static: {is_static}) ---")
     for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
-        json_dir = os.path.join(cf, f'OutputJsons_{res_override}', trial_name)
-        pkl_out = os.path.join(cf, f'OutputPkl_{res_override}', trial_name)
+        json_dir = os.path.join(cf, f'OutputJsons_{pose_folder_name}', trial_name)
+        pkl_out = os.path.join(cf, f'OutputPkl_{pose_folder_name}', trial_name)
         os.makedirs(pkl_out, exist_ok=True)
         
         files = sorted(glob.glob(os.path.join(json_dir, "*.json")), key=lambda f: int(re.findall(r'(\d+)_keypoints', f)[-1]) if re.findall(r'(\d+)_keypoints', f) else 0)
@@ -366,43 +387,31 @@ def generate_missing_pickles(session_path, trial_name, res_override, is_static=F
 
         if len(frames_list) == 1: frames_list.append(frames_list[0]) 
         
-        # Restore filename pattern
         with open(os.path.join(pkl_out, f"{trial_name}_rotated_pp.pkl"), 'wb') as f: pickle.dump(frames_list, f)
 
-def ensure_session_resources(session_path, trials, cres):
-    """
-    Checks for required folders and dynamically detects camera names 
-    from the directory structure.
-    """
+def ensure_session_resources(session_path, trials, pose_folder_name):
     # 1. Detect Camera Folders dynamically
     video_root = os.path.join(session_path, 'Videos')
     if not os.path.exists(video_root):
         os.makedirs(video_root, exist_ok=True)
         print(f"[FAILSAFE] Created root video directory: {video_root}")
-        return # Cannot detect cameras if the folder was just created and is empty
+        return
         
     camera_names = [d for d in os.listdir(video_root) if os.path.isdir(os.path.join(video_root, d)) and d.startswith('Cam')]
     print(f"[CHECK] Detected cameras: {camera_names}")
 
-    # 2. Define Core directories required by main.py and utils
     required_dirs = [
-        os.path.join(session_path, 'MarkerData', 'PostAugmentation'),
-        os.path.join(session_path, 'MarkerData', 'PreAugmentation'),
-        os.path.join(session_path, 'OpenSimData', 'Model'),
-        os.path.join(session_path, 'OpenSimData', 'Kinematics'),
-        os.path.join(session_path, 'VisualizerJsons')
+        os.path.join(session_path, 'MarkerData', pose_folder_name, 'PostAugmentation_v0.3'),
+        os.path.join(session_path, 'MarkerData', pose_folder_name, 'PreAugmentation'),
+        os.path.join(session_path, 'OpenSimData', pose_folder_name, 'Model'),
+        os.path.join(session_path, 'OpenSimData', pose_folder_name, 'Kinematics'),
+        os.path.join(session_path, 'VisualizerJsons', pose_folder_name)
     ]
-
-    # 3. Add dynamic trial-specific subdirectories for the Visualizer
-    for trial in trials:
-        required_dirs.append(os.path.join(session_path, 'VisualizerJsons', trial['name']))
-
-    # 4. Add camera-specific processing subdirectories
     for cam in camera_names:
         cam_path = os.path.join(video_root, cam)
         required_dirs.append(os.path.join(cam_path, 'InputMedia'))
-        required_dirs.append(os.path.join(cam_path, f'OutputPkl_{cres}'))
-        required_dirs.append(os.path.join(cam_path, f'OutputJsons_{cres}'))
+        required_dirs.append(os.path.join(cam_path, f'OutputPkl_{pose_folder_name}'))
+        required_dirs.append(os.path.join(cam_path, f'OutputJsons_{pose_folder_name}'))
 
     # 5. Execute creation
     for folder in required_dirs:
@@ -410,71 +419,86 @@ def ensure_session_resources(session_path, trials, cres):
             os.makedirs(folder, exist_ok=True)
             print(f"[FAILSAFE] Created missing directory: {folder}")
 
+def run_rtmpose_direct(session_path, trial_name, gpu_id, model_type, pose_folder_name):
+    python_exe = os.path.join(base_path, "python_env", "python.exe")
+    rtmpose_script = os.path.join(base_path, "Blackwell_RTMPose", "run_rtmpose.py")
+    print(f">>> [RTX 3060 DETECTED] Routing RTMPose through stable python_env engine...")
+
+    for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
+        input_vid = os.path.join(cf, 'InputMedia', trial_name, f"{trial_name}.mp4")
+        if not os.path.exists(input_vid): continue
+        
+        output_dir = os.path.join(cf, f"OutputJsons_{pose_folder_name}", trial_name)
+        os.makedirs(output_dir, exist_ok=True)
+        video_out_dir = os.path.join(cf, f"OutputMedia_{pose_folder_name}", trial_name)
+        os.makedirs(video_out_dir, exist_ok=True)
+        
+        cmd = [python_exe, rtmpose_script, 
+               "--video", input_vid, 
+               "--output_dir", output_dir, 
+               "--video_out", video_out_dir,
+               "--gpu", "0",
+               "--model_complexity", model_type]
+        
+        print(f"%%STATUS: Running RTMPose ({model_type}) for {trial_name}...")
+        subprocess.run(cmd, check=True)
+
 # -----------------------------------------------------------------------------
 # MAIN OFFLINE PIPELINE EXECUTION
 # -----------------------------------------------------------------------------
 
 def run_offline_pipeline():
     session_path = os.path.join(BASE_DATA_DIR, 'Data', SESSION_NAME)
-    
-    if not os.path.exists(session_path):
-        print(f"ERROR: Session not found: {session_path}")
-        return
 
-    cres = RESOLUTION
-    ensure_session_resources(session_path, TRIALS, cres)
-     
-    # 1. Extrinsics
-    run_auto_calibration(session_path) 
-    
-    # 2. Main Processing
-    for trial in TRIALS:
-         sanitize_video_file(session_path, trial['name'])
-         generate_neutral_thumbnails(session_path, trial['name'])
-         run_openpose_direct(session_path, trial['name'], cres)
-         
-         # FIX: Dynamically check if this is the neutral/static trial
-         is_static_trial = (trial['type'] == 'static' or trial['name'].lower() == 'neutral')
-         generate_missing_pickles(session_path, trial['name'], cres, is_static=is_static_trial)
-
-    print(f"\n================ STARTING OPENCAP PIPELINE ================\n")
-
-    # --- ADD THE OVERRIDE HERE ---
-    import utilsAugmenter
-    # This forces the pipeline to look in your LSTM folder instead of v0.3_lower
-    lstm_path = os.path.join(CURRENT_DIR, 'MarkerAugmenter', 'LSTM')
-    
-    # We must ensure the folder exists before point the tool to it
-    if os.path.exists(lstm_path):
-        print(f"[CONFIG] Pointing MarkerAugmenter to: {lstm_path}")
-        # This global variable in utilsAugmenter is what main.py uses
-        utilsAugmenter.EXTERNAL_AUGMENTER_MODEL_DIR = lstm_path 
+    # --- NEW UNIFIED NAMING LOGIC ---
+    if args.pose_estimator == "openpose":
+        pose_det = "OpenPose"
+        cres = args.resolution
+        rtm_model_type = None
     else:
-        print(f"[WARNING] LSTM folder not found at {lstm_path}!")
-    # -----------------------------
+        pose_det = "RTMPose"
+        cres = "l" if "-l" in args.resolution.lower() else "m"
+        rtm_model_type = cres
+        
+    pose_folder_name = f"{pose_det}_{cres}"
+    # --------------------------------
 
-    for trial in TRIALS:
-        try:
-            print(f"\n--- Processing Trial: {trial['name']} ({trial['type']}) ---")
+    step = args.step 
+
+    if step in ["all", "calibrate", "pose", "kinematics"]:
+        ensure_session_resources(session_path, TRIALS, pose_folder_name)
+        
+    if step in ["all", "calibrate"]:
+        run_auto_calibration(session_path) 
+        if step == "calibrate": return
+
+    if step in ["all", "pose", "kinematics"]:
+        for trial in TRIALS:
+            sanitize_video_file(session_path, trial['name'])
+            generate_neutral_thumbnails(session_path, trial['name'], pose_folder_name)
             
-            is_static_trial = (trial['type'] == 'static')
+            if step in ["all", "pose"]:
+                if args.pose_estimator == "openpose":
+                    run_openpose_direct(session_path, trial['name'], pose_folder_name)
+                else:
+                    run_rtmpose_direct(session_path, trial['name'], args.gpu_index, rtm_model_type, pose_folder_name)
+                
+                is_static_trial = (trial['type'] == 'static' or trial['name'].lower() == 'neutral')
+                generate_missing_pickles(session_path, trial['name'], pose_folder_name, 
+                                        is_static=is_static_trial, 
+                                        pose_estimator=args.pose_estimator)
             
-            main(SESSION_NAME, trial['name'], trial['id'], 
-                 isDocker=False, 
-                 extrinsicsTrial=False, 
-                 poseDetector='OpenPose', 
-                 imageUpsampleFactor=1, 
-                 scaleModel=is_static_trial, 
-                 resolutionPoseDetection=cres, 
-                 genericFolderNames=False, 
-                 bbox_thr=0.8, 
-                 calibrationOptions=None) 
-            
-            print(f"[SUCCESS] Finished {trial['name']}")
-        except Exception as e: 
-            print(f"[FAILED] {trial['name']}: {e}")
-            import traceback
-            traceback.print_exc()
+            if step in ["all", "kinematics"]:
+                try:
+                    is_static_trial = (trial['type'] == 'static' or trial['name'].lower() == 'neutral')
+                    main(SESSION_NAME, trial['name'], trial['id'], 
+                         isDocker=False, extrinsicsTrial=False, 
+                         poseDetector=pose_det, # Passes "OpenPose" or "RTMPose"
+                         imageUpsampleFactor=1, scaleModel=is_static_trial, 
+                         resolutionPoseDetection=pose_folder_name, # Passes the FULL folder name
+                         genericFolderNames=False, bbox_thr=0.8) 
+                except Exception as e:
+                    print(f"[FAILED] {trial['name']}: {e}")
 
 if __name__ == '__main__':
     run_offline_pipeline()

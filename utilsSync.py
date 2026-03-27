@@ -61,11 +61,15 @@ def synchronizeVideos(CameraDirectories, trialRelativePath, pathPoseDetector,
         # 1. Robust Video Path Construction
         videoFullPath = os.path.normpath(os.path.join(cameraDirectory, trialRelativePath))
         
-        # 2. Define Pickle Folder
         if poseDetector == 'OpenPose':
-            outputPklFolder = "OutputPkl_" + resolutionPoseDetection
+            outputPklFolder = 'OutputPkl_' + resolutionPoseDetection
+            outputMediaFolder = 'OutputMedia_' + resolutionPoseDetection
         elif poseDetector == 'mmpose':
-            outputPklFolder = "OutputPkl_mmpose_" + str(bbox_thr)
+            outputPklFolder = 'OutputPkl_' + resolutionPoseDetection
+            outputMediaFolder = 'OutputMedia_' + resolutionPoseDetection
+        elif poseDetector == 'RTMPose':
+            outputPklFolder = 'OutputPkl_' + resolutionPoseDetection
+            outputMediaFolder = 'OutputMedia_' + resolutionPoseDetection
             
         openposePklDir = os.path.join(cameraDirectory, outputPklFolder, trialName)
         os.makedirs(openposePklDir, exist_ok=True) 

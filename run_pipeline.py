@@ -344,31 +344,43 @@ def run_openpose_direct(session_path, trial_name, res_override, gpu_start_idx):
         except subprocess.CalledProcessError as e: 
             print(f"!! OPENPOSE ERROR: {e}"); raise e
 
-def generate_missing_pickles(session_path, trial_name, res_override, is_static=False):
+def generate_missing_pickles(session_path, trial_name, res_override, is_static=False, pose_estimator="openpose"):
     import re
+    # Match the old script's printout
+    print(f"\n--- [Step 3/3] Helper Files (Static Freeze: {is_static}) ---")
     for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
-        json_dir = os.path.join(cf, f'OutputJsons_{res_override}', trial_name)
-        pkl_out = os.path.join(cf, f'OutputPkl_{res_override}', trial_name)
+        # The folder MUST match what you pass to main()
+        suffix = res_override if pose_estimator == "openpose" else "RTMPose"
+        json_dir = os.path.join(cf, f'OutputJsons_{suffix}', trial_name)
+        pkl_out = os.path.join(cf, f'OutputPkl_{suffix}', trial_name)
         os.makedirs(pkl_out, exist_ok=True)
         
-        files = sorted(glob.glob(os.path.join(json_dir, "*.json")), key=lambda f: int(re.findall(r'(\d+)_keypoints', f)[-1]) if re.findall(r'(\d+)_keypoints', f) else 0)
-        if not files: continue
+        files = sorted(glob.glob(os.path.join(json_dir, "*.json")), 
+                       key=lambda f: int(re.findall(r'(\d+)_keypoints', f)[-1]) if re.findall(r'(\d+)_keypoints', f) else 0)
         
+        if not files:
+            print(f"    [WARNING] No JSONs found in {json_dir}")
+            continue
+
         frames_list = []
         for jf in files:
             try:
                 with open(jf) as f: d = json.load(f)
                 frames_list.append(d['people'] if 'people' in d and d['people'] else [{'pose_keypoints_2d': [0]*75}])
             except: frames_list.append([{'pose_keypoints_2d': [0]*75}])
-            
+        
         if is_static and frames_list:
             kp_array = []
             for frame in frames_list: kp_array.append(frame[0].get('pose_keypoints_2d', [0]*75))
-            median_kp = np.median(np.array(kp_array), axis=0).tolist()
+            median_kp = np.median(kp_array, axis=0).tolist()
             frames_list = [[{'pose_keypoints_2d': median_kp}]] * len(frames_list)
-            
-        if len(frames_list) == 1: frames_list.append(frames_list[0])
-        with open(os.path.join(pkl_out, f"{trial_name}_rotated_pp.pkl"), 'wb') as f: pickle.dump(frames_list, f)
+
+        if len(frames_list) == 1: frames_list.append(frames_list[0]) 
+        
+        # This filename is hardcoded in Stanford's utilsSync.py
+        pkl_path = os.path.join(pkl_out, f"{trial_name}_rotated_pp.pkl")
+        with open(pkl_path, 'wb') as f: 
+            pickle.dump(frames_list, f)
 
 # --- 8. EXECUTION ---
 def run_session_pipeline(session_name, gpu_id="0", resolution="1x736"):

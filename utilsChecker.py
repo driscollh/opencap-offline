@@ -1329,15 +1329,24 @@ def triangulateMultiviewVideo(CameraParamDict,keypointDict,imageScaleFactor=1,
         endInd = confidence3D.shape[2]
                 
     # Rewrite videos based on sync time and trimmed trc.
+    # Rewrite videos based on sync time and trimmed trc.
     if CameraDirectories != None and trialName !=None:       
         print('Writing synchronized videos')
+        
+        # Extract the resolution suffix dynamically from outputMediaFolder
+        res_suffix = ""
+        if outputMediaFolder is not None and "OutputMedia_" in outputMediaFolder:
+            res_suffix = outputMediaFolder.replace("OutputMedia_", "")
+        
+        if res_suffix and res_suffix != "*":
+            vis_video_base = os.path.join('VisualizerVideos', res_suffix)
+        else:
+            vis_video_base = 'VisualizerVideos'
+            
         outputVideoDir = os.path.abspath(os.path.join(
-                        list(CameraDirectories.values())[0],'../../','VisualizerVideos',trialName))
-        # Check if the directory already exists
-        if os.path.exists(outputVideoDir):
-            # If it exists, delete it and its contents
-            shutil.rmtree(outputVideoDir)
-        os.makedirs(outputVideoDir,exist_ok=True)
+                        list(CameraDirectories.values())[0],'../../', vis_video_base, trialName))
+        os.makedirs(outputVideoDir, exist_ok=True)
+
         for iCam,camName in enumerate(keypointDict):
                         
             nFramesToWrite = endInd-startInd

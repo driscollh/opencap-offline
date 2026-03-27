@@ -568,6 +568,42 @@ class SubjectSelectorDialog(QDialog):
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
+        # GPU Selection
+        layout.addWidget(QLabel("Select GPU:"))
+        self.gpu_combo = QComboBox()
+        self.gpu_map = self._get_gpu_info()
+        self.gpu_combo.addItems(list(self.gpu_map.keys()))
+        layout.addWidget(self.gpu_combo)
+
+        # --- DYNAMIC DLC CHECK FOR POSE ESTIMATOR ---
+        layout.addWidget(QLabel("Pose Estimator:"))
+        self.pose_combo = QComboBox()
+        
+        # Identify the DLC path relative to the launcher
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        dlc_path = os.path.join(base_path, "Blackwell_RTMPose")
+        
+        # Build the choices list
+        pose_choices = ["OpenPose"]
+        if os.path.exists(dlc_path):
+            pose_choices.append("RTMPose")
+            self.pose_combo.setToolTip("Blackwell DLC detected: RTMPose Unlocked.")
+        else:
+            self.pose_combo.setToolTip("DLC missing: RTMPose is disabled for this installation.")
+
+        self.pose_combo.addItems(pose_choices)
+        layout.addWidget(self.pose_combo)
+        # --------------------------------------------
+        
+        # Resolution Selection
+        layout.addWidget(QLabel("Resolution:"))
+        self.res_combo = QComboBox()
+        layout.addWidget(self.res_combo)
+
+        # Connect the estimator change to the resolution/complexity logic
+        self.pose_combo.currentTextChanged.connect(self._update_res_options)
+        self._update_res_options(self.pose_combo.currentText())
+
         # 1. Video Player
         self.video_label = QLabel()
         self.video_label.setAlignment(Qt.AlignCenter)
@@ -1360,13 +1396,25 @@ class PipelineConfigDialog(QDialog):
         self.gpu_map = self._get_gpu_info()
         self.gpu_combo.addItems(list(self.gpu_map.keys()))
         layout.addWidget(self.gpu_combo)
+
+        # --- NEW: Pose Estimator Selection ---
+        layout.addWidget(QLabel("Pose Estimator:"))
+        self.pose_combo = QComboBox()
+        self.pose_combo.setToolTip("Select the AI model for pose estimation")
+        self.pose_combo.addItems(["OpenPose", "RTMPose"])
+        layout.addWidget(self.pose_combo)
+        # -------------------------------------
         
         # Resolution Selection
         layout.addWidget(QLabel("Resolution:"))
         self.res_combo = QComboBox()
         self.res_combo.setToolTip("Select processing resolution preset")
-        self.res_combo.addItems(["default", "1x736", "1x736_2scales","736x1 (Landscape HQ)"])
+        self.res_combo.addItems(["1x368", "1x736", "1x736_2scales","736x1 (Landscape)"])
         layout.addWidget(self.res_combo)
+
+        # Inside _init_ui, after creating pose_combo:
+        self.pose_combo.currentTextChanged.connect(self._update_res_options)
+        self._update_res_options(self.pose_combo.currentText())
         
         # Trial Selection
         layout.addWidget(QLabel("Select Trials to Process:"))
@@ -1395,6 +1443,20 @@ class PipelineConfigDialog(QDialog):
         btn_box.addWidget(btn_cancel)
         btn_box.addWidget(btn_run)
         layout.addLayout(btn_box)
+
+    def _update_res_options(self, estimator):
+        """Changes resolution options or model complexity based on estimator."""
+        self.res_combo.clear()
+        if estimator.lower() == "openpose":
+            # Standard OpenPose resolution presets
+            self.res_combo.addItems(["1x368", "1x736", "1x736_2scales", "736x1 (Landscape)"])
+            self.res_combo.setEnabled(True)
+        else:
+            # RTMPose Model Complexity Toggles
+            # 'rtmpose-m' is the Balanced/Fast model
+            # 'rtmpose-l' is the High Accuracy model
+            self.res_combo.addItems(["RTMPose-m (Fast/Balanced)", "RTMPose-l (High Accuracy)"])
+            self.res_combo.setEnabled(True) # Re-enable so the user can choose
 
     def _get_gpu_info(self) -> Dict[str, str]:
         """
@@ -1451,12 +1513,7 @@ class PipelineConfigDialog(QDialog):
             self.trial_layout.addWidget(label)
 
     def get_data(self) -> Dict[str, Any]:
-        """
-        Get selected configuration.
-        
-        Returns:
-            Dictionary with gpu, res, and trials keys
-        """
+        """Get selected configuration."""
         selected_trials = [
             InputValidator.sanitize_trial_name(t) 
             for t, chk in self.checks.items() 
@@ -1466,6 +1523,7 @@ class PipelineConfigDialog(QDialog):
         return {
             "gpu": self.gpu_map[self.gpu_combo.currentText()],
             "res": self.res_combo.currentText(),
+            "pose_estimator": self.pose_combo.currentText().lower(), # Adds 'openpose' or 'rtmpose'
             "trials": selected_trials
         }
 
@@ -2077,34 +2135,85 @@ class OpenCapPro(QMainWindow):
         return tooltips.get(trial_type, "")
     
     def _create_pipeline_strip(self):
-        """Create pipeline control buttons"""
+        """Create pipeline control buttons with Research Mode toggle"""
+        from PyQt5.QtWidgets import QStackedWidget
+        
         strip = QWidget()
-        strip_layout = QHBoxLayout(strip)
+        strip_layout = QVBoxLayout(strip)
         strip_layout.setContentsMargins(20, 10, 20, 10)
         
-        calibration_btn = QPushButton("1. RUN INTRINSICS")
-        calibration_btn.setFixedHeight(Config.BUTTON_HEIGHT)
-        calibration_btn.clicked.connect(self.run_intrinsics)
-        calibration_btn.setToolTip(
-            "Run camera calibration using calibration trials.\n"
-            "Calculates camera intrinsic and extrinsic parameters."
-        )
+        # --- TOGGLE SWITCH ---
+        toggle_layout = QHBoxLayout()
+        self.research_mode_cb = QCheckBox("Research Mode (Granular Controls)")
+        self.research_mode_cb.setStyleSheet("font-weight: bold; color: #888;")
+        self.research_mode_cb.toggled.connect(self._toggle_research_mode)
+        toggle_layout.addStretch()
+        toggle_layout.addWidget(self.research_mode_cb)
+        strip_layout.addLayout(toggle_layout)
+        
+        # --- STACKED WIDGET ---
+        self.pipeline_stack = QStackedWidget()
+        
+        # 1. CLINICAL PAGE
+        self.clinical_page = QWidget()
+        clin_layout = QHBoxLayout(self.clinical_page)
+        clin_layout.setContentsMargins(0, 0, 0, 0)
+        
+        calibration_btn_clin = QPushButton("1. RUN INTRINSICS")
+        calibration_btn_clin.setFixedHeight(Config.BUTTON_HEIGHT)
+        calibration_btn_clin.clicked.connect(self.run_intrinsics)
         
         pipeline_btn = QPushButton("2. RUN PIPELINE")
-        pipeline_btn.setObjectName("AccentButton")
+        pipeline_btn.setObjectName("AccentButton") # Keeps the bright color
         pipeline_btn.setFixedHeight(Config.BUTTON_HEIGHT)
-        pipeline_btn.clicked.connect(self.run_pipeline)
-        pipeline_btn.setToolTip(
-            "Execute the full processing pipeline:\n"
-            "• Pose detection\n"
-            "• 3D marker reconstruction\n"
-            "• Overlay generation\n"
-            "(Ctrl+Shift+P)"
-        )
+        pipeline_btn.clicked.connect(lambda: self.run_pipeline(step="all"))
         
-        strip_layout.addWidget(calibration_btn)
-        strip_layout.addWidget(pipeline_btn)
+        clin_layout.addWidget(calibration_btn_clin)
+        clin_layout.addWidget(pipeline_btn)
+        
+        # 2. RESEARCH PAGE
+        self.research_page = QWidget()
+        res_layout = QHBoxLayout(self.research_page)
+        res_layout.setContentsMargins(0, 0, 0, 0)
+        
+        calibration_btn_res = QPushButton("1. Run Intrinsics")
+        calibration_btn_res.setFixedHeight(Config.BUTTON_HEIGHT)
+        calibration_btn_res.clicked.connect(self.run_intrinsics)
+        
+        # --- NEW: Dedicated Extrinsics Button ---
+        btn_extrinsics = QPushButton("2. Calibrate Extrinsics")
+        btn_extrinsics.setFixedHeight(Config.BUTTON_HEIGHT)
+        btn_extrinsics.clicked.connect(lambda: self.run_pipeline(step="calibrate"))
+        
+        # --- CHANGED: Pose Estimator now acts as Step 3 ---
+        btn_pose = QPushButton("3. Run Pose")
+        btn_pose.setFixedHeight(Config.BUTTON_HEIGHT)
+        btn_pose.clicked.connect(lambda: self.run_pipeline(step="pose"))
+        
+        btn_kinematics = QPushButton("4. Triangulate & OpenSim")
+        btn_kinematics.setFixedHeight(Config.BUTTON_HEIGHT)
+        btn_kinematics.clicked.connect(lambda: self.run_pipeline(step="kinematics"))
+        
+        res_layout.addWidget(calibration_btn_res)
+        res_layout.addWidget(btn_extrinsics)
+        res_layout.addWidget(btn_pose)
+        res_layout.addWidget(btn_kinematics)
+        
+        # Add pages to stack
+        self.pipeline_stack.addWidget(self.clinical_page)
+        self.pipeline_stack.addWidget(self.research_page)
+        
+        strip_layout.addWidget(self.pipeline_stack)
         self.main_layout.addWidget(strip)
+
+    def _toggle_research_mode(self, checked):
+        """Swaps the visible button panel"""
+        if checked:
+            self.pipeline_stack.setCurrentIndex(1)
+            self._update_status("Research Mode Enabled: Granular execution unlocked.")
+        else:
+            self.pipeline_stack.setCurrentIndex(0)
+            self._update_status("Clinical Mode Enabled: Automated pipeline locked in.")
     
     def _create_dashboard(self):
         """Create main visualization dashboard"""
@@ -2362,7 +2471,11 @@ class OpenCapPro(QMainWindow):
             # Find all folders starting with "OutputVideos"
             output_candidates = sorted([
                 d.name for d in cam_root.iterdir()
-                if d.is_dir() and d.name.startswith("OutputVideos")
+                if d.is_dir() and (
+                    d.name.startswith("OutputVideos") or 
+                    d.name.startswith("OutputMedia") or 
+                    d.name.startswith("OutputJsons")
+                )
             ], reverse=True)
             
             # Debug: Tell us if it even found the OutputVideos folder
@@ -2384,7 +2497,7 @@ class OpenCapPro(QMainWindow):
                     for out_folder in output_candidates:
                         res_string = out_folder.replace("OutputVideos_", "").replace("OutputMedia_", "")
                         
-                        potential_trc = self.data_dir / session_name / "MarkerData" / f"OpenPose_{res_string}" / "PreAugmentation" / f"{trial_name}.trc"
+                        potential_trc = self.data_dir / session_name / "MarkerData" / res_string / "PreAugmentation" / f"{trial_name}.trc"
                         exact_vid_path = cam_root / out_folder / trial_name / f"{trial_name}_overlay.avi"
                         
                         if exact_vid_path.exists():
@@ -2426,9 +2539,11 @@ class OpenCapPro(QMainWindow):
                     
                     # 6. Add a clickable item for EVERY resolution it finds!
                     for out_folder in output_candidates:
-                        res_string = out_folder.replace("OutputVideos_", "").replace("OutputMedia_", "")
+                        res_string = out_folder.replace("OutputVideos_", "").replace("OutputMedia_", "").replace("OutputJsons_", "")
                         exact_vid_path = cam_root / out_folder / trial_name / f"{trial_name}_overlay.avi"
-                        potential_trc = self.data_dir / session_name / "MarkerData" / f"OpenPose_{res_string}" / "PreAugmentation" / f"{trial_name}.trc"
+                        
+                        # REMOVED hardcoded "OpenPose_" here so it finds RTMPose directories seamlessly
+                        potential_trc = self.data_dir / session_name / "MarkerData" / res_string / "PreAugmentation" / f"{trial_name}.trc"
                         
                         if exact_vid_path.exists():
                             proc_item = QTreeWidgetItem([f"Overlay: {res_string}"])
@@ -2670,11 +2785,10 @@ class OpenCapPro(QMainWindow):
         finally:
             self.root.after(0, lambda: self.btn_intrinsics.config(state=tk.NORMAL, text="A. GENERATE INTRINSICS"))
     
-    def run_pipeline(self) -> None:
+    def run_pipeline(self, step="all") -> None: # Add step parameter back
         session = self.session_combo.currentText()
         if not session: return
 
-        # 1. Pipeline Config
         dlg = PipelineConfigDialog(self, str(self.data_dir / session))
         if dlg.exec_() != QDialog.Accepted: return
         config = dlg.get_data()
@@ -2682,12 +2796,13 @@ class OpenCapPro(QMainWindow):
         self.current_pipeline_config = {
             "session": session,
             "args": config,
-            "resuming": False
+            "step": step # Save the step in config
         }
 
-        self._start_pipeline_process(session, config)
+        # Pass the step to the process starter
+        self._start_pipeline_process(session, config, step=step)
 
-    def _start_pipeline_process(self, session, config, resume_file=None):
+    def _start_pipeline_process(self, session, config, step="all"): # Add step parameter
         self.process = QProcess()
         self.process.setProcessChannelMode(QProcess.MergedChannels)
         self.process.readyReadStandardOutput.connect(self._handle_stdout)
@@ -2696,20 +2811,19 @@ class OpenCapPro(QMainWindow):
         script_args = [
             str(self.script_path),
             "--session", session,
-            "--gpu", config["gpu"],
+            "--gpu_index", config["gpu"],
             "--resolution", config["res"],
+            "--step", step,
+            "--pose_estimator", config.get("pose_estimator", "openpose").lower(), 
             "--trials"
         ] + config["trials"]
         
-        if resume_file:
-             script_args.extend(["--resume_with", resume_file])
-
         self.log_box.clear()
-        self.log_box.append(f">>> Executing: {' '.join(script_args)}")
+        self.log_box.append(f">>> Executing {config.get('pose_estimator').upper()}: {' '.join(script_args)}")
         
         self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0)
-        self.progress_label.setText("Processing...")
+        self.progress_bar.setRange(0, 0) # Pulsing busy mode
+        self.progress_label.setText("Processing with stable backend...")
         
         self.process.start(sys.executable, script_args)
 
@@ -2717,7 +2831,6 @@ class OpenCapPro(QMainWindow):
         self.progress_bar.setVisible(False)
         self.progress_label.setText("Idle")
 
-        # --- CODE 5: MULTIPLE SUBJECTS DETECTED ---
         if exit_code == 5:
             self.log_box.append("\n>>> INTERRUPT: Multiple subjects detected.")
             self._handle_subject_selection()
@@ -2734,39 +2847,33 @@ class OpenCapPro(QMainWindow):
         session = self.current_pipeline_config['session']
         session_dir = self.data_dir / session
         
-        # 1. Find the tracking file generated by the pipeline
         track_file = session_dir / "temp_tracking_data.json"
-        
         if not track_file.exists():
             QMessageBox.critical(self, "Error", "Pipeline requested review but tracking data is missing.")
             return
 
-        # 2. Determine which video to show (usually Cam0 of the first dynamic trial)
-        # We read the json to find the video path
         with open(track_file) as f: meta = json.load(f)
         video_path = meta.get('video_path', '')
         
         if not os.path.exists(video_path):
              QMessageBox.warning(self, "Video Missing", f"Could not find video for review:\n{video_path}")
-             # Fallback to just failing
              return
 
-        # 3. Launch the Selector Dialog
         selector = SubjectSelectorDialog(self, video_path, str(track_file))
         if selector.exec_() == QDialog.Accepted and selector.selection_made:
-            
-            # 4. Save Exclusion List
             exclusion_file = session_dir / "exclusion_list.json"
             with open(exclusion_file, 'w') as f:
                 json.dump({"exclude_ids": selector.excluded_ids}, f)
             
             self.log_box.append(f"\n>>> Resuming pipeline. Excluding IDs: {selector.excluded_ids}")
             
-            # 5. Resume Pipeline
+            # Resume WITH the correct step
+            current_step = self.current_pipeline_config.get("step", "all")
             self._start_pipeline_process(
                 session, 
                 self.current_pipeline_config['args'], 
-                resume_file=str(exclusion_file)
+                resume_file=str(exclusion_file),
+                step=current_step
             )
         else:
             self.log_box.append("\n>>> Pipeline Cancelled by User during selection.")

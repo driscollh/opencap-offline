@@ -122,10 +122,11 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
         poseDetector = 'mmpose'        
     elif poseDetector == 'openpose':
         poseDetector = 'OpenPose'
-    if poseDetector == 'mmpose':
-        outputMediaFolder = 'OutputMedia_mmpose' + str(bbox_thr)
-    elif poseDetector == 'OpenPose':
-        outputMediaFolder = 'OutputMedia_' + resolutionPoseDetection
+    elif poseDetector == 'rtmpose':
+        poseDetector = 'RTMPose'
+    
+    # Unified output folder
+    outputMediaFolder = f'OutputMedia_{resolutionPoseDetection}'
     
     if extrinsicsTrial:
         runCameraCalibration = True
@@ -173,15 +174,14 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
         poseDetectorDirectory = getOpenPoseDirectory(isDocker)
     elif poseDetector == 'mmpose':
         poseDetectorDirectory = getMMposeDirectory(isDocker)    
+    elif poseDetector == 'RTMPose':
+        poseDetectorDirectory = os.path.join(baseDir, 'Blackwell_RTMPose')   
         
     # %% Create marker folders
     if genericFolderNames:
         markerDataFolderName = os.path.join('MarkerData') 
     else:
-        suff_pd = '_' + (str(bbox_thr) if poseDetector == 'mmpose' else resolutionPoseDetection)
-        markerDataFolderName = os.path.join('MarkerData', poseDetector + suff_pd) 
-        if markerDataFolderNameSuffix is not None:
-            markerDataFolderName = os.path.join(markerDataFolderName, markerDataFolderNameSuffix)
+        markerDataFolderName = os.path.join('MarkerData', resolutionPoseDetection)
 
     preAugmentationDir = os.path.join(sessionDir, markerDataFolderName, 'PreAugmentation')
     os.makedirs(preAugmentationDir, exist_ok=True)
@@ -360,7 +360,7 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
         
     if runOpenSimPipeline:
         openSimPipelineDir = os.path.join(baseDir, "opensimPipeline")
-        openSimDir = os.path.join(sessionDir, 'OpenSimData' if genericFolderNames else os.path.join('OpenSimData', poseDetector + suff_pd))
+        openSimDir = os.path.join(sessionDir, 'OpenSimData' if genericFolderNames else os.path.join('OpenSimData', resolutionPoseDetection))        
         outputScaledModelDir = os.path.join(openSimDir, 'Model')
         suffix_model = '_shoulder' if 'shoulder' in sessionMetadata['openSimModel'] else ''
         
@@ -371,7 +371,7 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
             pathScaledModel = runScaleTool(os.path.join(openSimPipelineDir, 'Scaling', 'Setup_scaling_LaiUhlrich2022.xml'), 
                                            pathGenericModel4Scaling, sessionMetadata['mass_kg'], pathAugmentedOutputFiles[trialName], 
                                            timeRange4Scaling, outputScaledModelDir, subjectHeight=sessionMetadata['height_m'], suffix_model=suffix_model)
-            neutral_img_dir = os.path.join(sessionDir, 'NeutralPoseImages') if genericFolderNames else os.path.join(sessionDir, 'NeutralPoseImages', poseDetector + suff_pd)
+            neutral_img_dir = os.path.join(sessionDir, 'NeutralPoseImages') if genericFolderNames else os.path.join(sessionDir, 'NeutralPoseImages', resolutionPoseDetection)            
             popNeutralPoseImages(cameraDirectories, cameras2Use, timeRange4Scaling[0], neutral_img_dir, trial_id, writeVideo=True)   
             pathOutputIK, pathModelIK = pathScaledModel[:-5] + '.mot', pathScaledModel
         else:
@@ -379,7 +379,7 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
             pathOutputIK, pathModelIK = runIKTool(os.path.join(openSimPipelineDir, 'IK', f'Setup_IK{suffix_model}.xml'), 
                                                   pathScaledModel, pathAugmentedOutputFiles[trialName], os.path.join(openSimDir, 'Kinematics'))
         
-        vis_json_dir = os.path.join(sessionDir, 'VisualizerJsons') if genericFolderNames else os.path.join(sessionDir, 'VisualizerJsons', poseDetector + suff_pd)
+        vis_json_dir = os.path.join(sessionDir, 'VisualizerJsons') if genericFolderNames else os.path.join(sessionDir, 'VisualizerJsons', resolutionPoseDetection)
         os.makedirs(os.path.join(vis_json_dir, trialName), exist_ok=True)
         generateVisualizerJson(pathModelIK, pathOutputIK, os.path.join(vis_json_dir, trialName, trialName + '.json'), 
                                vertical_offset=vertical_offset)
