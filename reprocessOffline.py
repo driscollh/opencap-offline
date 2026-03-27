@@ -39,10 +39,8 @@ args = get_args()
 base_path = os.path.dirname(os.path.abspath(__file__))
 
 # --- STRICT DLL ISOLATION ---
-if args.gpu_index == "0":
-    target_env = "python_env_5060"
-else:
-    target_env = "python_env"
+# Permanently route all DLLs to the standard environment
+target_env = "python_env"
 
 # Use the full absolute path
 dll_path = os.path.abspath(os.path.join(base_path, target_env, 'Library', 'bin'))
@@ -51,7 +49,8 @@ if os.path.exists(dll_path):
     print(f"[GPU CONFIG] Target Card: {args.gpu_index} | Forcing DLLs from: {target_env}")
     # Clear the PATH variable to ensure NO other CUDA versions interfere
     os.environ['PATH'] = dll_path + os.pathsep + os.environ['PATH']
-    # Force Windows to use THIS directory for the 5060 process
+    # Force Windows to use THIS directory 
+    os.add_dll_directory(dll_path)rectory for the 5060 process
     os.add_dll_directory(dll_path)
 
 # Force the environment variable for the subprocesses to use the correct card
