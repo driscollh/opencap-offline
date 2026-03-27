@@ -26,6 +26,9 @@ Because the machine learning models and background engines (OpenPose, FFmpeg) ar
 * Download the `dependencies.zip` file.
 * Extract the contents directly into the empty `dependencies/` folder inside this project. This should result in three separate subfolders, one for each key dependency.
 
+**4. Extract mmcv.zip inside of Blackwell_RTMPose**
+* Extract the .zip file in order to use RTMPose options
+
 ## Usage
 Once the environment is set up and the dependencies are in place, you can launch the local processing by running the main Python script in your environment:
 
