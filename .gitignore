@@ -6,6 +6,7 @@ python_env/
 Recorded_sessions/
 DebugTools/
 dependencies/
+Blackwell_RTMPose/
 
 # Excluded Files
 python_env.zip
