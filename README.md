@@ -22,12 +22,10 @@ Navigate into the main folder and install the required Python environment packag
 
 **3. Download the Local Dependencies (Required)**
 Because the machine learning models and background engines (OpenPose, FFmpeg) are too large for GitHub, they are hosted securely on Zenodo.
-* Go to the Zenodo archive: [https://doi.org/10.5281/zenodo.18995971](https://doi.org/10.5281/zenodo.18995971)
+* Go to the Zenodo archive: [https://doi.org/10.5281/zenodo.19325950](https://doi.org/10.5281/zenodo.19325950)
 * Download the `dependencies.zip` file.
 * Extract the contents directly into the empty `dependencies/` folder inside this project. This should result in three separate subfolders, one for each key dependency.
-
-**4. Extract mmcv.zip inside of Blackwell_RTMPose**
-* Extract the .zip file in order to use RTMPose options
+* Extract the `RTMPose.zip` file directly into the main project folder. This should be titled "Blackwell_RTMPose", and contain a `dependencies/` folder and `mmcv/` folder.
 
 ## Usage
 Once the environment is set up and the dependencies are in place, you can launch the local processing by running the main Python script in your environment:
