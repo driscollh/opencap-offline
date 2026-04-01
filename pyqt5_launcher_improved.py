@@ -403,20 +403,160 @@ class InputValidator:
             return False, f"{field_name} must be a valid integer", None
 
 class IntrinsicsWorker(QThread):
-    """Background thread for camera calibration to prevent GUI freezing"""
+    """
+    Background thread for camera calibration.
+    Supports calibrating all cameras or a single specific camera.
+    """
     finished = Signal(bool, str)  # Emits (Success Status, Message)
 
-    def __init__(self, session_name):
+    def __init__(self, session_name: str, target_cam: Optional[str] = None):
+        """
+        Initialize the worker.
+        
+        Args:
+            session_name: The name of the active session folder.
+            target_cam: Name of specific camera (e.g., 'Cam0') or None for all.
+        """
         super().__init__()
         self.session_name = session_name
+        self.target_cam = target_cam
 
     def run(self):
+        """Execute the calibration logic."""
         try:
+            # Import the calibration logic locally to ensure it's fresh
             import generate_intrinsics
-            generate_intrinsics.calibrate_session(self.session_name)
-            self.finished.emit(True, "Intrinsics calibration complete and saved.")
+            
+            if self.target_cam:
+                # Logic for a single camera
+                logger.info(f"Starting intrinsics for {self.target_cam} in {self.session_name}")
+                generate_intrinsics.calibrate_camera(self.session_name, self.target_cam)
+                msg = f"Intrinsics for {self.target_cam} complete."
+            else:
+                # Standard logic for all cameras
+                logger.info(f"Starting intrinsics for all cameras in {self.session_name}")
+                generate_intrinsics.calibrate_session(self.session_name)
+                msg = "Full session intrinsics calibration complete."
+            
+            self.finished.emit(True, msg)
+            
         except Exception as e:
-            self.finished.emit(False, str(e))
+            logger.error(f"IntrinsicsWorker error: {str(e)}", exc_info=True)
+            self.finished.emit(False, f"Calibration Error: {str(e)}")
+
+class MetadataEditorDialog(QDialog):
+    """Popup to edit ALL metadata with a safety reset to the session's initial state."""
+    def __init__(self, parent, session_path):
+        super().__init__(parent)
+        self.setWindowTitle("Advanced Metadata Editor")
+        self.resize(600, 750)
+        self.session_path = Path(session_path)
+        self.metadata_file = self.session_path / "sessionMetadata.yaml"
+        self.inputs = {}
+        
+        # 1. Capture the "Original" state as a snapshot before any edits occur
+        self.original_data = {}
+        if self.metadata_file.exists():
+            with open(self.metadata_file, 'r') as f:
+                self.original_data = yaml.safe_load(f)
+        
+        self.current_data = self.original_data.copy()
+        self._init_ui()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        
+        # Scroll area for the form
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        self.form_layout = QFormLayout(content)
+        
+        # Populate the fields based on current_data
+        self._populate_fields()
+        
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
+
+        # Bottom Buttons
+        btn_layout = QHBoxLayout()
+        
+        # RESET BUTTON
+        btn_reset = QPushButton("Reset to Defaults")
+        btn_reset.setToolTip("Revert all fields to the original session creation values.")
+        btn_reset.clicked.connect(self.reset_to_original)
+        
+        # SAVE & CANCEL
+        btn_save = QPushButton("Save Metadata")
+        btn_save.setObjectName("AccentButton")
+        btn_save.clicked.connect(self.save_metadata)
+        
+        btn_cancel = QPushButton("Cancel")
+        btn_cancel.clicked.connect(self.reject)
+        
+        btn_layout.addWidget(btn_reset)
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_cancel)
+        btn_layout.addWidget(btn_save)
+        layout.addLayout(btn_layout)
+
+    def _populate_fields(self):
+        """Clears and rebuilds form rows based on the stored data dictionary."""
+        # Clear existing rows if any
+        while self.form_layout.count():
+            child = self.form_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+        
+        self.inputs = {}
+        for key, value in self.current_data.items():
+            if isinstance(value, dict):
+                edit = QLineEdit(json.dumps(value))
+                edit.setToolTip("Nested data (JSON format)")
+            else:
+                edit = QLineEdit(str(value))
+            
+            self.form_layout.addRow(f"<b>{key}:</b>", edit)
+            self.inputs[key] = edit
+
+    def reset_to_original(self):
+        """Restores the UI fields to the snapshot taken when the dialog opened."""
+        reply = QMessageBox.question(
+            self, "Confirm Reset", 
+            "Are you sure you want to discard all changes and return to the original session values?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            self.current_data = self.original_data.copy()
+            self._populate_fields()
+
+    def save_metadata(self):
+        """Validates all fields and writes back to sessionMetadata.yaml."""
+        updated_dict = {}
+        for key, edit in self.inputs.items():
+            text = edit.text().strip()
+            # Determine type based on the original data structure
+            orig = self.original_data.get(key)
+            
+            try:
+                if isinstance(orig, dict):
+                    updated_dict[key] = json.loads(text)
+                elif isinstance(orig, int):
+                    updated_dict[key] = int(text)
+                elif isinstance(orig, float):
+                    updated_dict[key] = float(text)
+                elif isinstance(orig, bool):
+                    updated_dict[key] = text.lower() == 'true'
+                else:
+                    updated_dict[key] = text
+            except Exception as e:
+                QMessageBox.critical(self, "Formatting Error", f"Invalid input for {key}: {e}")
+                return
+
+        with open(self.metadata_file, 'w') as f:
+            yaml.dump(updated_dict, f, default_flow_style=False, sort_keys=False)
+        self.accept()
 
 class PlatformUtils:
     """Platform-specific utilities"""
@@ -1572,8 +1712,9 @@ class CreateSessionDialog(QDialog):
         
         self.tag_combo = QComboBox()
         self.tag_combo.addItems([
-            "healthy", "unimpaired", "impaired", "exo assisted", "Other"
+            "Healthy", "Unimpaired", "Impaired", "Exo-assisted", "Other"
         ])
+        self.tag_combo.currentTextChanged.connect(self._handle_tag_change)
 
         self.placement_combo = QComboBox()
         self.placement_combo.addItems(["Vertical (Wall)", "Horizontal (Ground)"])
@@ -1597,7 +1738,7 @@ class CreateSessionDialog(QDialog):
 
         # 1. Camera Type (Priority 2)
         self.cam_type_combo = QComboBox()
-        self.cam_type_combo.addItems(["iPhone", "Android", "Other"])
+        self.cam_type_combo.addItems(["iPhone", "Android", "Other", "Mixed"])
         self.cam_type_combo.setToolTip("Select the type of camera device being used")
 
         # 2. Checkerboard Placement (Priority 1)
@@ -1614,12 +1755,13 @@ class CreateSessionDialog(QDialog):
         self.cams_edit = QLineEdit(str(Config.DEFAULT_NUM_CAMERAS))
         
         form_calib.addRow("Camera Type:", self.cam_type_combo)
+        form_calib.addRow("Camera Orientation:", self.orientation_combo)
+        form_calib.addRow("Camera Nums:", self.cams_edit)
         form_calib.addRow("Board Placement:", self.placement_combo)
-        form_calib.addRow("Orientation:", self.orientation_combo)
-        form_calib.addRow("Rows:*", self.rows_edit)
-        form_calib.addRow("Cols:*", self.cols_edit)
-        form_calib.addRow("Size (mm):*", self.size_edit)
-        form_calib.addRow("Cameras:*", self.cams_edit)
+        form_calib.addRow("Rows:", self.rows_edit)
+        form_calib.addRow("Cols:", self.cols_edit)
+        form_calib.addRow("Square Size (mm):", self.size_edit)
+        
 
         layout.addLayout(form_calib)
         
@@ -1745,6 +1887,56 @@ class CreateSessionDialog(QDialog):
             "cams": int(self.cams_edit.text()),
             "orientation": self.orientation_combo.currentText()
         }
+
+    def _handle_tag_change(self, text):
+        """If 'Other' is selected, prompt for a custom string."""
+        if text == "Other":
+            from PyQt5.QtWidgets import QInputDialog
+            custom_tag, ok = QInputDialog.getText(
+                self, 
+                "Custom Subject Tag", 
+                "Enter specific subject condition/tag:",
+                text=""
+            )
+            
+            if ok and custom_tag.strip():
+                # Temporarily add the custom tag to the combo and select it
+                self.tag_combo.addItem(custom_tag.strip())
+                self.tag_combo.setCurrentText(custom_tag.strip())
+            else:
+                # If user cancelled, revert to a default like 'healthy'
+                self.tag_combo.setCurrentIndex(0)
+
+class MixedCameraDialog(QDialog):
+    """Dialogue to assign device types to individual cameras."""
+    def __init__(self, parent, num_cameras):
+        super().__init__(parent)
+        self.setWindowTitle("Mixed Camera Setup")
+        layout = QVBoxLayout(self)
+        self.combos = {}
+
+        form = QFormLayout()
+        for i in range(num_cameras):
+            combo = QComboBox()
+            combo.addItems(["iPhone", "Android", "Other"])
+            cam_name = f"Cam{i}"
+            form.addRow(f"{cam_name} Device:", combo)
+            self.combos[cam_name] = combo
+        
+        layout.addLayout(form)
+        
+        btn = QPushButton("Confirm Assignments")
+        btn.clicked.connect(self.accept)
+        layout.addWidget(btn)
+
+    def get_config(self):
+        # Maps user-friendly names to the internal strings main.py expects
+        mapping = {
+            "iPhone": "iPhone_Auto_Detect",
+            "Android": "Android_Generic",
+            "Other": "Generic_Webcam"
+        }
+        return {cam: mapping[cb.currentText()] for cam, cb in self.combos.items()}
 
 # =============================================================================
 # MAIN WINDOW
@@ -2035,37 +2227,51 @@ class OpenCapPro(QMainWindow):
         
         header_layout = QHBoxLayout(header)
         
-        # Logo
+        # --- LEFT SIDE: Logo and New Session ---
         self.logo_label = QLabel()
         self._update_logo()
-        
         header_layout.addWidget(self.logo_label)
-        header_layout.addStretch()
-        
-        # Session selector
-        self.session_combo = QComboBox()
-        self.session_combo.setFixedWidth(200)
-        
-        # --- FIX: Removed duplicate connection line ---
-        self.session_combo.currentTextChanged.connect(self.on_session_change)
-        
-        self.session_combo.setToolTip("Select active session")
-        header_layout.addWidget(self.session_combo)
-        
-        # Refresh button
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh_sessions)
-        refresh_btn.setToolTip("Refresh session list (Ctrl+R)")
-        header_layout.addWidget(refresh_btn)
-        
+
         # New session button
         new_btn = QPushButton("+ New Session")
         new_btn.setObjectName("AccentButton")
         new_btn.clicked.connect(self.open_new_session_dialog)
         new_btn.setToolTip("Create new session (Ctrl+N)")
         header_layout.addWidget(new_btn)
+
+        header_layout.addStretch()
+
+        # --- RIGHT SIDE: Metadata, Refresh, and Selector ---
+        
+        # Session selector
+        self.session_combo = QComboBox()
+        self.session_combo.setFixedWidth(200)
+        self.session_combo.currentTextChanged.connect(self.on_session_change)
+        
+        self.session_combo.setToolTip("Select active session")
+        header_layout.addWidget(self.session_combo)
+        
+        # Refresh button
+        refresh_btn = QPushButton("Refresh List")
+        refresh_btn.clicked.connect(self.refresh_sessions)
+        refresh_btn.setToolTip("Refresh session list (Ctrl+R)")
+        header_layout.addWidget(refresh_btn)
+        
+        self.edit_meta_btn = QPushButton("Edit Metadata")
+        self.edit_meta_btn.clicked.connect(self.open_metadata_editor)
+        header_layout.addWidget(self.edit_meta_btn)
         
         self.main_layout.addWidget(header)
+
+    def open_metadata_editor(self):
+        session = self.session_combo.currentText()
+        if not session: return
+        
+        dlg = MetadataEditorDialog(self, self.data_dir / session)
+        if dlg.exec_() == QDialog.Accepted:
+            self._update_status("Metadata updated successfully.", success=True)
+            # Refresh UI elements that might depend on metadata
+            self.on_session_change(session)
     
     def _create_import_panel(self):
         """Create trial import interface"""
@@ -2747,6 +2953,24 @@ class OpenCapPro(QMainWindow):
         if not session:
             QMessageBox.warning(self, "Warning", "Please select a session first.")
             return
+
+        from PyQt5.QtWidgets import QInputDialog
+        cams = list(self.cam_buttons.keys())
+        choices = ["All Cameras"] + cams
+        
+        cam_choice, ok = QInputDialog.getItem(
+            self, "Calibrate Intrinsics", "Select Camera to Calibrate:", choices, 0, False
+        )
+        
+        if ok:
+            target = None if cam_choice == "All Cameras" else cam_choice
+            self.intrinsics_btn = self.sender()
+            self.intrinsics_btn.setEnabled(False)
+            
+            # Start worker with the specific target
+            self.worker = IntrinsicsWorker(session, target_cam=target)
+            self.worker.finished.connect(self._on_intrinsics_finished)
+            self.worker.start()
         
         # 1. Disable the button to prevent multiple simultaneous runs
         # We store a reference to the button to re-enable it later
@@ -2905,12 +3129,23 @@ class OpenCapPro(QMainWindow):
             placement_map = {"Vertical (Wall)": "Perpendicular", "Horizontal (Ground)": "Lying"}
             mapped_placement = placement_map.get(data['placement'], "Perpendicular")
             
-            # Map Camera Type
-            cam_model = "Generic_Camera"
-            if data['cam_type'] == "iPhone":
-                cam_model = "iPhone_Auto_Detect" # Trigger auto-detection in main.py
-            elif data['cam_type'] == "Android":
-                cam_model = "Android_Generic"
+            # --- UPDATED MAPPING LOGIC ---
+            num_cams = int(data['cams'])
+            if data['cam_type'] == "Mixed":
+                mixed_dlg = MixedCameraDialog(self, num_cams)
+                if mixed_dlg.exec_() == QDialog.Accepted:
+                    cam_model_map = mixed_dlg.get_config()
+                else:
+                    return # Cancel session creation if mixed config is cancelled
+            else:
+                # Standard single-type logic
+                base_model = "Generic_Webcam"
+                if data['cam_type'] == "iPhone":
+                    base_model = "iPhone_Auto_Detect"
+                elif data['cam_type'] == "Android":
+                    base_model = "Android_Generic"
+                
+                cam_model_map = {f"Cam{i}": base_model for i in range(num_cams)}
 
             orientation_val = "landscape" if "Landscape" in data['orientation'] else "portrait"
 
@@ -2927,7 +3162,7 @@ class OpenCapPro(QMainWindow):
                 "filterfrequency": "default",
                 "gender_mf": data['gender'],
                 "height_m": float(data['height']),
-                "iphoneModel": {f"Cam{i}": cam_model for i in range(int(data['cams']))},
+                "iphoneModel": cam_model_map,
                 "markerAugmentationSettings": {"markerAugmenterModel": "LSTM"},
                 "mass_kg": float(data['weight']),
                 "openSimModel": "LaiUhlrich2022",

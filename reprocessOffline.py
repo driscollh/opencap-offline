@@ -468,8 +468,11 @@ def run_offline_pipeline():
         ensure_session_resources(session_path, TRIALS, pose_folder_name)
         
     if step in ["all", "calibrate"]:
-        run_auto_calibration(session_path) 
-        if step == "calibrate": return
+    # Pull the specific model for the camera being processed
+    for cam_name, model_tag in meta.get('iphoneModel', {}).items():
+        # Ensure calibration logic uses the specific tag (iPhone vs Android)
+        # instead of a global session default
+        run_auto_calibration_for_cam(session_path, cam_name, model_tag)
 
     if step in ["all", "pose", "kinematics"]:
         for trial in TRIALS:
