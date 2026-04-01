@@ -1597,7 +1597,7 @@ class CreateSessionDialog(QDialog):
 
         # 1. Camera Type (Priority 2)
         self.cam_type_combo = QComboBox()
-        self.cam_type_combo.addItems(["iPhone", "Android", "GoPro", "Other"])
+        self.cam_type_combo.addItems(["iPhone", "Android", "Other"])
         self.cam_type_combo.setToolTip("Select the type of camera device being used")
 
         # 2. Checkerboard Placement (Priority 1)
@@ -2906,13 +2906,11 @@ class OpenCapPro(QMainWindow):
             mapped_placement = placement_map.get(data['placement'], "Perpendicular")
             
             # Map Camera Type
-            cam_model = "Generic_Webcam"
+            cam_model = "Generic_Camera"
             if data['cam_type'] == "iPhone":
                 cam_model = "iPhone_Auto_Detect" # Trigger auto-detection in main.py
             elif data['cam_type'] == "Android":
                 cam_model = "Android_Generic"
-            elif data['cam_type'] == "GoPro":
-                cam_model = "GoPro_Generic"
 
             orientation_val = "landscape" if "Landscape" in data['orientation'] else "portrait"
 
