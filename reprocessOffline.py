@@ -12,6 +12,7 @@ import cv2
 import yaml
 import argparse
 import traceback
+import generate_intrinsics
 
 # --- DYNAMIC CONFIGURATION (Argparse for GUI Inputs) -----------------------
 def get_args():
@@ -49,8 +50,7 @@ if os.path.exists(dll_path):
     print(f"[GPU CONFIG] Target Card: {args.gpu_index} | Forcing DLLs from: {target_env}")
     # Clear the PATH variable to ensure NO other CUDA versions interfere
     os.environ['PATH'] = dll_path + os.pathsep + os.environ['PATH']
-    # Force Windows to use THIS directory 
-    os.add_dll_directory(dll_path)rectory for the 5060 process
+    # Force Windows to use THIS directory for the 5060 process
     os.add_dll_directory(dll_path)
 
 # Force the environment variable for the subprocesses to use the correct card
@@ -420,7 +420,8 @@ def ensure_session_resources(session_path, trials, pose_folder_name):
 
 def run_rtmpose_direct(session_path, trial_name, gpu_id, model_type, pose_folder_name):
     python_exe = os.path.join(base_path, "python_env", "python.exe")
-    rtmpose_script = os.path.join(base_path, "Blackwell_RTMPose", "run_rtmpose.py")
+    # Tell it to look in the root folder instead
+    rtmpose_script = os.path.join(base_path, "run_rtmpose.py")
     print(f">>> [RTX 3060 DETECTED] Routing RTMPose through stable python_env engine...")
 
     for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
@@ -436,7 +437,7 @@ def run_rtmpose_direct(session_path, trial_name, gpu_id, model_type, pose_folder
                "--video", input_vid, 
                "--output_dir", output_dir, 
                "--video_out", video_out_dir,
-               "--gpu", "0",
+               "--gpu", "0", # <-- FIX: Hardcode to 0 because CUDA_VISIBLE_DEVICES handles the isolation
                "--model_complexity", model_type]
         
         print(f"%%STATUS: Running RTMPose ({model_type}) for {trial_name}...")
@@ -468,11 +469,13 @@ def run_offline_pipeline():
         ensure_session_resources(session_path, TRIALS, pose_folder_name)
         
     if step in ["all", "calibrate"]:
-    # Pull the specific model for the camera being processed
-    for cam_name, model_tag in meta.get('iphoneModel', {}).items():
-        # Ensure calibration logic uses the specific tag (iPhone vs Android)
-        # instead of a global session default
-        run_auto_calibration_for_cam(session_path, cam_name, model_tag)
+        # 1. Explicitly check for and create the CalibrationImages folder
+        calib_out = os.path.join(session_path, 'CalibrationImages')
+        os.makedirs(calib_out, exist_ok=True)
+        print(f"[SYSTEM] Verified CalibrationImages directory: {calib_out}")
+        
+        # 2. Run the ACTUAL extrinsics calibration function
+        run_auto_calibration(session_path)
 
     if step in ["all", "pose", "kinematics"]:
         for trial in TRIALS:
@@ -495,9 +498,9 @@ def run_offline_pipeline():
                     is_static_trial = (trial['type'] == 'static' or trial['name'].lower() == 'neutral')
                     main(SESSION_NAME, trial['name'], trial['id'], 
                          isDocker=False, extrinsicsTrial=False, 
-                         poseDetector=pose_det, # Passes "OpenPose" or "RTMPose"
+                         poseDetector=pose_det, 
                          imageUpsampleFactor=1, scaleModel=is_static_trial, 
-                         resolutionPoseDetection=pose_folder_name, # Passes the FULL folder name
+                         resolutionPoseDetection=pose_folder_name, 
                          genericFolderNames=False, bbox_thr=0.8) 
                 except Exception as e:
                     print(f"[FAILED] {trial['name']}: {e}")

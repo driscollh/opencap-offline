@@ -422,23 +422,21 @@ class IntrinsicsWorker(QThread):
         self.target_cam = target_cam
 
     def run(self):
-        """Execute the calibration logic."""
+        """Execute calibration logic in background thread."""
         try:
-            # Import the calibration logic locally to ensure it's fresh
             import generate_intrinsics
-            
             if self.target_cam:
-                # Logic for a single camera
-                logger.info(f"Starting intrinsics for {self.target_cam} in {self.session_name}")
+                # Targeted calibration for single camera
                 generate_intrinsics.calibrate_camera(self.session_name, self.target_cam)
                 msg = f"Intrinsics for {self.target_cam} complete."
             else:
-                # Standard logic for all cameras
-                logger.info(f"Starting intrinsics for all cameras in {self.session_name}")
+                # Batch calibration for all cameras
                 generate_intrinsics.calibrate_session(self.session_name)
                 msg = "Full session intrinsics calibration complete."
             
             self.finished.emit(True, msg)
+        except Exception as e:
+            self.finished.emit(False, str(e))
             
         except Exception as e:
             logger.error(f"IntrinsicsWorker error: {str(e)}", exc_info=True)
@@ -886,15 +884,14 @@ class SubjectSelectorDialog(QDialog):
 class VideoLoader(QThread):
     finished = Signal(list, str) 
     
-    def __init__(self, path, target_size):
+    def __init__(self, path, target_size=(480, 854)): # Portrait buffer resolution
         super().__init__()
-        self.path = path
+        self.path = str(path) # Force string to prevent OpenCV path errors
         self.target_size = target_size 
         self.frames = []
-        self._is_cancelled = False  # <--- NEW FLAG
+        self._is_cancelled = False
         
     def cancel(self):
-        """Safely signal the thread to stop."""
         self._is_cancelled = True
 
     def run(self):
@@ -907,7 +904,7 @@ class VideoLoader(QThread):
             self.finished.emit([], "error")
             return
             
-        while not self._is_cancelled:  # <--- CHECK FLAG HERE
+        while not self._is_cancelled: 
             ret, frame = cap.read()
             if not ret:
                 break
@@ -919,12 +916,12 @@ class VideoLoader(QThread):
             bytes_per_line = ch * w
             qimg = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
             
-            pix = QPixmap.fromImage(qimg).copy()
-            self.frames.append(pix)
+            # CRITICAL FIX: Append QImage.copy() NOT QPixmap! 
+            # QPixmap crashes if created outside the main GUI thread.
+            self.frames.append(qimg.copy())
             
         cap.release()
         
-        # Only emit success if we weren't interrupted
         if not self._is_cancelled:
             self.finished.emit(self.frames, self.path)
 
@@ -942,22 +939,19 @@ class DualVideoPlayer(QWidget):
     def _init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        
-        # Video Area
         video_layout = QHBoxLayout()
-        
-        # Fixed 9:16 Portrait Size
-        self.fixed_size = (280, 498)
         
         self.raw_label = QLabel("Raw Video")
         self.raw_label.setAlignment(Qt.AlignCenter)
         self.raw_label.setStyleSheet("background-color: black; border: 1px solid #333;")
-        self.raw_label.setFixedSize(*self.fixed_size)
+        self.raw_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.raw_label.setMinimumSize(100, 100) 
         
         self.overlay_label = QLabel("Overlay")
         self.overlay_label.setAlignment(Qt.AlignCenter)
         self.overlay_label.setStyleSheet("background-color: black; border: 1px solid #333;")
-        self.overlay_label.setFixedSize(*self.fixed_size)
+        self.overlay_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.overlay_label.setMinimumSize(100, 100)
         
         video_layout.addWidget(self.raw_label)
         video_layout.addWidget(self.overlay_label)
@@ -968,7 +962,7 @@ class DualVideoPlayer(QWidget):
         self.play_button = QPushButton("▶")
         self.play_button.setFixedWidth(40)
         self.play_button.clicked.connect(self.toggle_play)
-        self.play_button.setEnabled(False) # Disable until loaded
+        self.play_button.setEnabled(False)
         
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setRange(0, 100)
@@ -979,9 +973,9 @@ class DualVideoPlayer(QWidget):
         controls.addWidget(self.slider)
         layout.addLayout(controls)
         
-        # Loading Label (Overlay on top, optional, but helpful)
+        # Status Label (Only created ONCE now)
         self.status_lbl = QLabel("No Video", self)
-        self.status_lbl.setStyleSheet("color: white; background: rgba(0,0,0,0.5); padding: 5px;")
+        self.status_lbl.setStyleSheet("color: white; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 3px;")
         self.status_lbl.adjustSize()
         self.status_lbl.move(10, 10)
     
@@ -1002,34 +996,40 @@ class DualVideoPlayer(QWidget):
         self.stop()
         self.raw_cache = []
         self.overlay_cache = []
+        
+        # Hardcode a high-res buffer size so the background thread doesn't rely on UI geometry
+        buffer_size = (480, 854) 
+        
         self.play_button.setEnabled(False)
         self.slider.setEnabled(False)
         self.raw_label.clear()
         self.overlay_label.clear()
-        self.raw_label.setText("Loading...")
         self.status_lbl.setText("Buffering videos to RAM...")
         self.status_lbl.show()
         
-        # Start Raw Loader
         if raw_path and os.path.exists(raw_path):
-            loader1 = VideoLoader(raw_path, self.fixed_size)
+            loader1 = VideoLoader(raw_path, buffer_size)
             loader1.finished.connect(self._on_raw_loaded)
             self.loaders.append(loader1)
             loader1.start()
             
-        # Start Overlay Loader
         if overlay_path and os.path.exists(overlay_path):
-            loader2 = VideoLoader(overlay_path, self.fixed_size)
+            loader2 = VideoLoader(overlay_path, buffer_size)
             loader2.finished.connect(self._on_overlay_loaded)
             self.loaders.append(loader2)
             loader2.start()
 
     def _on_raw_loaded(self, frames, path):
-        self.raw_cache = frames
+        if path == "error" or not frames:
+            self.status_lbl.setText("Error loading raw video.")
+            return
+        # THREAD SAFETY: Convert QImage to QPixmap on the Main Thread
+        self.raw_cache = [QPixmap.fromImage(img) for img in frames]
         self._check_loading_complete()
 
     def _on_overlay_loaded(self, frames, path):
-        self.overlay_cache = frames
+        if path != "error" and frames:
+            self.overlay_cache = [QPixmap.fromImage(img) for img in frames]
         self._check_loading_complete()
 
     def _check_loading_complete(self):
@@ -1045,23 +1045,30 @@ class DualVideoPlayer(QWidget):
             # Clean up threads
             self.loaders = []
 
+    def resizeEvent(self, event):
+        """Dynamic scaling logic to maintain 9:16 aspect ratio on resize."""
+        super().resizeEvent(event)
+        self._update_display()
+
+    def _update_display(self):
+        """Re-renders the current frame to fit the new widget size."""
+        if self.current_frame < len(self.raw_cache):
+            self.show_frame(self.current_frame)
+
     def show_frame(self, idx: int) -> None:
         if self.total_frames == 0: return
-        
-        # Clamp index
         idx = max(0, min(idx, self.total_frames - 1))
         self.current_frame = idx
         self.frame_changed.emit(idx)
         
-        # 1. Show Raw (Instant from RAM)
+        # DYNAMIC SCALING: Smoothly scale the buffered frame to fit the current window size
         if idx < len(self.raw_cache):
-            self.raw_label.setPixmap(self.raw_cache[idx])
+            pix = self.raw_cache[idx].scaled(self.raw_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.raw_label.setPixmap(pix)
             
-        # 2. Show Overlay (Instant from RAM)
         if idx < len(self.overlay_cache):
-            self.overlay_label.setPixmap(self.overlay_cache[idx])
-        elif self.overlay_cache: # Handle case where overlay might be shorter
-            pass 
+            pix_ov = self.overlay_cache[idx].scaled(self.overlay_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.overlay_label.setPixmap(pix_ov)
 
     def toggle_play(self) -> None:
         if self.total_frames == 0: return
@@ -1106,6 +1113,11 @@ class DualVideoPlayer(QWidget):
     def closeEvent(self, event):
         self.stop()
         super().closeEvent(event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.total_frames > 0:
+            self.show_frame(self.current_frame)
 
 class BoneRegistry:
     """Manages loading of external bone meshes."""
@@ -1509,16 +1521,70 @@ class SkeletonViewer3D(QtInteractor):
 # DIALOG WINDOWS
 # =============================================================================
 
+class CalibrationReviewDialog(QDialog):
+    """Displays the generated checkerboard calibration images."""
+    def __init__(self, parent, session_path):
+        super().__init__(parent)
+        self.setWindowTitle("Extrinsics Calibration Review")
+        self.resize(1000, 700)
+        self.setStyleSheet(parent.styleSheet())
+        layout = QVBoxLayout(self)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        grid = QGridLayout(content)
+
+        calib_dir = Path(session_path) / "CalibrationImages"
+        images = list(calib_dir.glob("*_calib.jpg"))
+
+        if not images:
+            layout.addWidget(QLabel("No calibration images found. The detection may have failed on the first frame."))
+        else:
+            row, col = 0, 0
+            for img_path in images:
+                # Create Image Label
+                lbl = QLabel()
+                pix = QPixmap(str(img_path))
+                lbl.setPixmap(pix.scaled(450, 450, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                lbl.setStyleSheet("border: 1px solid #555;")
+                
+                # Create Title Label
+                text_lbl = QLabel(f"<b>{img_path.name}</b>")
+                text_lbl.setAlignment(Qt.AlignCenter)
+
+                # Bundle together
+                vbox = QVBoxLayout()
+                vbox.addWidget(text_lbl)
+                vbox.addWidget(lbl)
+                
+                container = QWidget()
+                container.setLayout(vbox)
+                grid.addWidget(container, row, col)
+
+                col += 1
+                if col > 1: # 2 images per row
+                    col = 0
+                    row += 1
+
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
+        
+        btn = QPushButton("Acknowledge & Close")
+        btn.setObjectName("AccentButton")
+        btn.clicked.connect(self.accept)
+        layout.addWidget(btn)
+
 class PipelineConfigDialog(QDialog):
-    """
-    Configuration dialog for pipeline execution.
+    """Configuration dialog for pipeline execution."""
     
-    Allows user to select GPU, resolution preset, and which trials to process.
-    """
-    
-    def __init__(self, parent, session_path: str):
+    # Updated signature to accept step and valid_tags
+    def __init__(self, parent, session_path: str, step: str = "all", valid_tags: list = None):
         super().__init__(parent)
         self.session_path = Path(session_path)
+        self.step = step
+        self.valid_tags = valid_tags or []
+        
         self.setWindowTitle("Pipeline Configuration")
         self.resize(400, 500)
         self.setStyleSheet(parent.styleSheet())
@@ -1577,12 +1643,37 @@ class PipelineConfigDialog(QDialog):
         
         btn_run = QPushButton("RUN PIPELINE")
         btn_run.setObjectName("AccentButton")
-        btn_run.clicked.connect(self.accept)
+        # Route to our new validation checker before accepting
+        btn_run.clicked.connect(self._validate_and_accept_pipeline)
         btn_run.setToolTip("Start processing selected trials")
         
         btn_box.addWidget(btn_cancel)
         btn_box.addWidget(btn_run)
         layout.addLayout(btn_box)
+
+    def _validate_and_accept_pipeline(self):
+        """Prevents running Kinematics on data that hasn't passed through the Pose step yet."""
+        if self.step == "kinematics":
+            est = self.pose_combo.currentText().lower()
+            res_text = self.res_combo.currentText()
+            
+            # Reconstruct the expected folder tag 
+            if est == "openpose":
+                folder_tag = f"OpenPose_{res_text}"
+            else:
+                cres = "l" if "-l" in res_text.lower() else "m"
+                folder_tag = f"RTMPose_{cres}"
+                
+            # Cross-reference with the hard drive scan
+            if folder_tag not in self.valid_tags:
+                QMessageBox.warning(
+                    self, 
+                    "Data Missing", 
+                    f"No 2D tracking data found for {folder_tag}.\n\nPlease run '3. Run Pose' with these exact settings first."
+                )
+                return
+                
+        self.accept()
 
     def _update_res_options(self, estimator):
         """Changes resolution options or model complexity based on estimator."""
@@ -2090,6 +2181,35 @@ class OpenCapPro(QMainWindow):
         # FIX: Allow window to be resized in both directions
         self.setMinimumSize(1200, 800) 
 
+    def _process_finished(self, exit_code, exit_status):
+        self.progress_bar.setVisible(False)
+        self.progress_label.setText("Idle")
+
+        if exit_code == 5:
+            self.log_box.append("\n>>> INTERRUPT: Multiple subjects detected.")
+            self._handle_subject_selection()
+            return
+
+        if exit_code == 0:
+            self.log_box.append("\n>>> SUCCESS: Pipeline Finished.")
+            
+            # --- NEW: Show Calibration Images ---
+            current_step = self.current_pipeline_config.get("step", "all")
+            if current_step in ["calibrate", "all"]:
+                session = self.current_pipeline_config['session']
+                calib_dir = self.data_dir / session / "CalibrationImages"
+                
+                # Only show dialog if images were actually generated
+                if calib_dir.exists() and any(calib_dir.iterdir()):
+                    dlg = CalibrationReviewDialog(self, self.data_dir / session)
+                    dlg.exec_()
+                else:
+                    QMessageBox.information(self, "Success", "Processing Complete!")
+            else:
+                QMessageBox.information(self, "Success", "Processing Complete!")
+        else:
+            self.log_box.append(f"\n>>> ERROR: Failed with code {exit_code}")
+
     def _create_log_area_content(self):
         """Refactored Log Area to live inside the Vertical Splitter"""
         log_layout = QVBoxLayout(self.log_container)
@@ -2241,25 +2361,19 @@ class OpenCapPro(QMainWindow):
 
         header_layout.addStretch()
 
-        # --- RIGHT SIDE: Metadata, Refresh, and Selector ---
-        
-        # Session selector
-        self.session_combo = QComboBox()
-        self.session_combo.setFixedWidth(200)
-        self.session_combo.currentTextChanged.connect(self.on_session_change)
-        
-        self.session_combo.setToolTip("Select active session")
-        header_layout.addWidget(self.session_combo)
-        
-        # Refresh button
-        refresh_btn = QPushButton("Refresh List")
-        refresh_btn.clicked.connect(self.refresh_sessions)
-        refresh_btn.setToolTip("Refresh session list (Ctrl+R)")
-        header_layout.addWidget(refresh_btn)
-        
+        # --- RIGHT SIDE: Management Controls ---
         self.edit_meta_btn = QPushButton("Edit Metadata")
         self.edit_meta_btn.clicked.connect(self.open_metadata_editor)
         header_layout.addWidget(self.edit_meta_btn)
+        
+        refresh_btn = QPushButton("Refresh List")
+        refresh_btn.clicked.connect(self.refresh_sessions)
+        header_layout.addWidget(refresh_btn)
+        
+        self.session_combo = QComboBox()
+        self.session_combo.setFixedWidth(200)
+        self.session_combo.currentTextChanged.connect(self.on_session_change)
+        header_layout.addWidget(self.session_combo)
         
         self.main_layout.addWidget(header)
 
@@ -2274,36 +2388,46 @@ class OpenCapPro(QMainWindow):
             self.on_session_change(session)
     
     def _create_import_panel(self):
-        """Create trial import interface"""
-        panel = QFrame()
-        panel.setObjectName("ImportPanel") # <--- THIS IS THE KEY FIX
-        panel_layout = QVBoxLayout(panel)
-        
-        # Top row: Trial type selection
-        top_row = QHBoxLayout()
-        top_row.addWidget(QLabel(
-            "IMPORT TRIAL:", 
-            styleSheet="font-weight:bold; color:#888;"
-        ))
+        self.import_container = QFrame()
+        self.import_container.setObjectName("ImportPanel")
+        layout = QVBoxLayout(self.import_container)
+
+        # Header with Toggle Button
+        header_row = QHBoxLayout()
+        self.toggle_import_btn = QPushButton("▼ IMPORT TRIAL")
+        self.toggle_import_btn.setCheckable(True)
+        self.toggle_import_btn.setChecked(True)
+        self.toggle_import_btn.setStyleSheet("text-align: left; font-weight: bold; border: none; background: none;")
+        self.toggle_import_btn.clicked.connect(self._toggle_import_visibility)
+        header_row.addWidget(self.toggle_import_btn)
+        layout.addLayout(header_row)
+
+        # Content Wrapper (Hidden when toggled)
+        self.import_content = QWidget()
+        content_layout = QVBoxLayout(self.import_content)
+        content_layout.setContentsMargins(10, 0, 10, 10)
+
+        type_row = QHBoxLayout()
+        type_row.addWidget(QLabel("TRIAL TYPE:", styleSheet="font-weight:bold; color:#888;"))
         
         # Radio buttons for trial types
         self.type_group = QButtonGroup(self)
         self.type_buttons: Dict[str, QRadioButton] = {}
         
-        for text, trial_type in [
+        # Define the trial types and add their radio buttons
+        for text, t_type in [
             ("Intrinsics", TrialType.INTRINSICS),
             ("Calibration", TrialType.CALIBRATION),
             ("Neutral", TrialType.NEUTRAL),
             ("Dynamic", TrialType.DYNAMIC)
         ]:
             radio = QRadioButton(text)
-            if trial_type == TrialType.CALIBRATION:
+            if t_type == TrialType.CALIBRATION:
                 radio.setChecked(True)
             
-            radio.setToolTip(self._get_trial_type_tooltip(trial_type))
             self.type_group.addButton(radio)
-            top_row.addWidget(radio)
-            self.type_buttons[trial_type.value] = radio
+            type_row.addWidget(radio)
+            self.type_buttons[t_type.value] = radio
             radio.toggled.connect(self._update_trial_name_input)
         
         # Trial name input
@@ -2313,22 +2437,24 @@ class OpenCapPro(QMainWindow):
             "Custom name for dynamic trials.\n"
             "Examples: walking_1, running_fast, jump_test"
         )
-        top_row.addWidget(self.trial_name_edit)
+        type_row.addWidget(self.trial_name_edit)
+        content_layout.addLayout(type_row)
         
-        panel_layout.addLayout(top_row)
-        
-        # Camera slots (dynamic)
         self.cam_slot_layout = QGridLayout()
-        panel_layout.addLayout(self.cam_slot_layout)
+        content_layout.addLayout(self.cam_slot_layout)
         
-        # Import button
         import_btn = QPushButton("EXECUTE IMPORT")
         import_btn.clicked.connect(self.run_import)
-        import_btn.setToolTip("Import selected videos into session structure (Ctrl+I)")
-        panel_layout.addWidget(import_btn)
+        content_layout.addWidget(import_btn)
         
-        self.main_layout.addWidget(panel)
-        self._update_trial_name_input()
+        layout.addWidget(self.import_content)
+        self.main_layout.addWidget(self.import_container)
+
+    def _toggle_import_visibility(self):
+        """Minimizes the import section to save space."""
+        is_visible = self.toggle_import_btn.isChecked()
+        self.import_content.setVisible(is_visible)
+        self.toggle_import_btn.setText("▼ IMPORT TRIAL" if is_visible else "▶ IMPORT TRIAL")
     
     def _get_trial_type_tooltip(self, trial_type: TrialType) -> str:
         """Get tooltip text for trial type"""
@@ -2422,42 +2548,31 @@ class OpenCapPro(QMainWindow):
             self._update_status("Clinical Mode Enabled: Automated pipeline locked in.")
     
     def _create_dashboard(self):
-        """Create main visualization dashboard"""
+        """Initialize visualization dashboard with dynamic scaling."""
         self.splitter = QSplitter(Qt.Horizontal)
         
         # Left: Trial tree
         self.tree = QTreeWidget()
-        self.tree.setHeaderHidden(True)
         self.tree.setFixedWidth(Config.TREE_WIDTH)
+        self.tree.setHeaderHidden(True)
+        
         self.tree.itemClicked.connect(self.on_tree_click)
-        self.tree.setToolTip("Click trial to load video and 3D visualization")
-
-        # --- NEW: Enable Right-Click Context Menu ---
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._show_tree_context_menu)
-        # --------------------------------------------
         
         self.splitter.addWidget(self.tree)
         
         # Center: 3D viewer
-        # --- CHANGED: Point to 'opencap-portable/Geometry' (app_path/Geometry) ---
-        geometry_folder = self.app_path / "Geometry"
-        self.skeleton_viewer = SkeletonViewer3D(geometry_path=geometry_folder)
+        self.skeleton_viewer = SkeletonViewer3D(geometry_path=self.app_path / "Geometry")
         self.splitter.addWidget(self.skeleton_viewer)
         
-        # Right: Video player
+        # Right: Video player (Minimum width instead of Fixed width)
         self.video_container = QWidget()
-        self.video_container.setFixedWidth(Config.VIDEO_CONTAINER_WIDTH)
+        self.video_container.setMinimumWidth(400) # Allows splitter to expand/contract
         video_layout = QVBoxLayout(self.video_container)
-        video_layout.setContentsMargins(0, 0, 0, 0)
-        
-        preview_label = QLabel("PREVIEW")
-        preview_label.setStyleSheet("font-weight:bold; color:#888; padding:5px;")
-        video_layout.addWidget(preview_label)
         
         self.video_player = DualVideoPlayer()
         self.video_player.frame_changed.connect(self.skeleton_viewer.update_frame)
-
         video_layout.addWidget(self.video_player)
         self.splitter.addWidget(self.video_container)
         
@@ -2641,7 +2756,6 @@ class OpenCapPro(QMainWindow):
         # --- 1. SAVE EXPANSION STATE ---
         expanded_paths = set()
         
-        # Helper function to recursively record which folders are open
         def save_state(item, current_path):
             path = f"{current_path}/{item.text(0)}" if current_path else item.text(0)
             if item.isExpanded():
@@ -2649,21 +2763,17 @@ class OpenCapPro(QMainWindow):
             for i in range(item.childCount()):
                 save_state(item.child(i), path)
                 
-        # Only save state if the tree actually has items in it
         was_populated = self.tree.topLevelItemCount() > 0
         if was_populated:
             for i in range(self.tree.topLevelItemCount()):
                 save_state(self.tree.topLevelItem(i), "")
 
-        # Now we can safely clear the tree
         self.tree.clear()
         
         video_root = self.data_dir / session_name / "Videos"
         if not video_root.exists(): return
         
-        # --- LOGGING START ---
         self.log_box.append(f"\n--- Scanning Session: {session_name} ---")
-        
         cameras = sorted([d.name for d in video_root.iterdir() if d.name.startswith("Cam")])
         
         for cam in cameras:
@@ -2674,7 +2784,7 @@ class OpenCapPro(QMainWindow):
             cam_root = video_root / cam
             media_path = cam_root / "InputMedia"
             
-            # Find all folders starting with "OutputVideos"
+            # ---> DEFINING output_candidates HERE (Prevents the NameError) <---
             output_candidates = sorted([
                 d.name for d in cam_root.iterdir()
                 if d.is_dir() and (
@@ -2684,7 +2794,6 @@ class OpenCapPro(QMainWindow):
                 )
             ], reverse=True)
             
-            # Debug: Tell us if it even found the OutputVideos folder
             self.log_box.append(f"[{cam}] Found Output Folders: {output_candidates}")
             
             if media_path.exists():
@@ -2693,72 +2802,62 @@ class OpenCapPro(QMainWindow):
                 for trial_name in trials:
                     trial_path = media_path / trial_name
                     
-                    # 1. TRC Path
-                    trc_path = self.data_dir / session_name / "MarkerData" / "PreAugmentation" / f"{trial_name}.trc"
-                    
-                    # 2. Overlay Search
-                    overlay_path = None
-                    trc_path = None # Initialize here
-                    
-                    for out_folder in output_candidates:
-                        res_string = out_folder.replace("OutputVideos_", "").replace("OutputMedia_", "")
-                        
-                        potential_trc = self.data_dir / session_name / "MarkerData" / res_string / "PreAugmentation" / f"{trial_name}.trc"
-                        exact_vid_path = cam_root / out_folder / trial_name / f"{trial_name}_overlay.avi"
-                        
-                        if exact_vid_path.exists():
-                            overlay_path = str(exact_vid_path)
-                            trc_path = str(potential_trc) if potential_trc.exists() else None
-                            break
-                        else:
-                            search_dir = cam_root / out_folder / trial_name
-                            if search_dir.exists():
-                                overlays = [f for f in search_dir.iterdir() if f.suffix.lower() in Config.OVERLAY_EXTENSION]
-                                if overlays:
-                                    overlay_path = str(overlays[0])
-                                    self.log_box.append(f"  -> FOUND OVERLAY (Fallback): {overlay_path}")
-                                    break
-                    
-                    # 3. Create Trial Folder Item
+                    # Create Trial Folder Item
                     trial_item = QTreeWidgetItem([trial_name])
                     trial_item.setIcon(0, self.style().standardIcon(QStyle.SP_DirIcon))
                     cam_item.addChild(trial_item)
                     
-                    # 4. Get the raw video paths
+                    # Get the raw video paths
                     videos = sorted([f for f in trial_path.iterdir() if f.suffix.lower() in Config.VIDEO_EXTENSIONS])
                     if not videos:
                         continue
                         
                     raw_vid_path = str(videos[0])
                     
-                    # 5. Add a "Raw Only" clickable item for EVERY video found
+                    # Add a "Raw Only" clickable item for EVERY video found
                     for vid in videos:
                         raw_item = QTreeWidgetItem([f"Raw Video: {vid.name}"])
                         raw_item.setIcon(0, self.style().standardIcon(QStyle.SP_FileIcon))
+                        # Use absolute paths!
                         raw_item.setData(0, Qt.UserRole, {
                             "type": "video",
-                            "path": str(vid),
+                            "path": str(vid.absolute()),
                             "overlay": None,
                             "trc": None
                         })
                         trial_item.addChild(raw_item)
                     
-                    # 6. Add a clickable item for EVERY resolution it finds!
+                    # Add a clickable item for EVERY resolution/overlay it finds!
                     for out_folder in output_candidates:
                         res_string = out_folder.replace("OutputVideos_", "").replace("OutputMedia_", "").replace("OutputJsons_", "")
-                        exact_vid_path = cam_root / out_folder / trial_name / f"{trial_name}_overlay.avi"
+                        trial_out_dir = cam_root / out_folder / trial_name
                         
-                        # REMOVED hardcoded "OpenPose_" here so it finds RTMPose directories seamlessly
+                        overlay_file = None
+                        if trial_out_dir.exists():
+                            for f in trial_out_dir.iterdir():
+                                if f.suffix.lower() in ['.avi', '.mp4']:
+                                    name_lower = f.name.lower()
+                                    # RTMPose specific file catch
+                                    if (name_lower.endswith('_overlay.avi') or 
+                                        name_lower.endswith('_diagnostic.avi') or 
+                                        '_rtmpose_diagnostic' in name_lower):
+                                        overlay_file = f
+                                        break
+                        
                         potential_trc = self.data_dir / session_name / "MarkerData" / res_string / "PreAugmentation" / f"{trial_name}.trc"
                         
-                        if exact_vid_path.exists():
-                            proc_item = QTreeWidgetItem([f"Overlay: {res_string}"])
+                        if overlay_file and overlay_file.exists():
+                            file_type_label = "Diagnostic" if "diagnostic" in overlay_file.name.lower() else "Overlay"
+                            
+                            proc_item = QTreeWidgetItem([f"{file_type_label} ({res_string})"])
                             proc_item.setIcon(0, self.style().standardIcon(QStyle.SP_MediaPlay))
+                            
+                            # CRITICAL: Convert all Path objects to absolute strings for VideoLoader
                             proc_item.setData(0, Qt.UserRole, {
                                 "type": "video",
-                                "path": raw_vid_path,
-                                "overlay": str(exact_vid_path),
-                                "trc": str(potential_trc) if potential_trc.exists() else None
+                                "path": str(Path(raw_vid_path).absolute()),
+                                "overlay": str(overlay_file.absolute()),
+                                "trc": str(potential_trc.absolute()) if potential_trc.exists() else None
                             })
                             trial_item.addChild(proc_item)
                         
@@ -2766,7 +2865,6 @@ class OpenCapPro(QMainWindow):
             cam_item.setExpanded(True)
             
         # --- 2. RESTORE EXPANSION STATE ---
-        # If the tree had items before we refreshed, re-apply the user's specific state
         if was_populated:
             def restore_state(item, current_path):
                 path = f"{current_path}/{item.text(0)}" if current_path else item.text(0)
@@ -2777,41 +2875,42 @@ class OpenCapPro(QMainWindow):
             for i in range(self.tree.topLevelItemCount()):
                 restore_state(self.tree.topLevelItem(i), "")
             
-        # Scroll log to bottom so you see the latest check
         sb = self.log_box.verticalScrollBar()
         sb.setValue(sb.maximum())
     
     def on_tree_click(self, item, col):
         """Intercepts the click and starts a tiny delay to prevent spam-crashing."""
         data = item.data(0, Qt.UserRole)
-        if not data: return
+        # Verify that the item clicked actually contains video data
+        if not data or data.get("type") != "video": 
+            return
         
-        if data["type"] == "video":
-            self.pending_click_data = data
-            # Restart the 200ms timer. If clicked again quickly, the timer resets.
-            self.tree_click_timer.start(200) 
-            self._update_status("Loading media...", warning=True)
+        self.pending_click_data = data
+        # Restart the 200ms timer to debounce rapid clicks
+        self.tree_click_timer.start(200) 
+        self._update_status("Loading media...", warning=True)
 
     def _execute_tree_click(self):
-        """Actually loads the video and skeleton after the user stops clicking."""
         data = self.pending_click_data
         if not data: return
-        
-        logger.info(f"Loading media from path: {data['path']}")
-        
-        # 1. Load Skeleton
-        if data.get("trc"):
-            self.skeleton_viewer.load_trc(data["trc"])
+    
+        # Ensure absolute string paths for the backend
+        raw_path = str(data.get("path", ""))
+        overlay_path = str(data.get("overlay", "")) if data.get("overlay") else None
+        trc_path = str(data.get("trc", "")) if data.get("trc") else None
+
+        # Load Skeleton
+        if trc_path and os.path.exists(trc_path):
+            self.skeleton_viewer.load_trc(trc_path)
         else:
             self.skeleton_viewer.clear_skeleton()
-        
-        # 2. Load Video & Overlay
+    
+        # Load Video
         self.video_player.blockSignals(True)
-        overlay_path = data.get("overlay")
-        self.video_player.load(data["path"], overlay_path)
+        self.video_player.load(raw_path, overlay_path)
         self.video_player.blockSignals(False)
         
-        # 3. Manually sync the first frame
+        # 3. Synchronize first frame
         if self.video_player.total_frames > 0:
             self.video_player.show_frame(0)
             
@@ -2948,7 +3047,7 @@ class OpenCapPro(QMainWindow):
     # -------------------------------------------------------------------------
     
     def run_intrinsics(self):
-        """Triggers the calibration and manages button state"""
+        """Triggers the calibration and manages button state."""
         session = self.session_combo.currentText()
         if not session:
             QMessageBox.warning(self, "Warning", "Please select a session first.")
@@ -2962,35 +3061,33 @@ class OpenCapPro(QMainWindow):
             self, "Calibrate Intrinsics", "Select Camera to Calibrate:", choices, 0, False
         )
         
+        # Only execute if the user actually clicks 'OK' (doesn't cancel)
         if ok:
             target = None if cam_choice == "All Cameras" else cam_choice
+            
+            # 1. Disable the button to prevent multiple simultaneous runs
             self.intrinsics_btn = self.sender()
             self.intrinsics_btn.setEnabled(False)
             
-            # Start worker with the specific target
+            # Save original text to restore later, then change it
+            self.original_btn_text = self.intrinsics_btn.text()
+            self.intrinsics_btn.setText("CALIBRATING...")
+            
+            target_str = target if target else 'All Cameras'
+            self.log_box.append(f"\n>>> Starting Intrinsics Calibration for: {target_str}")
+            
+            # 2. Start background worker EXACTLY ONCE
             self.worker = IntrinsicsWorker(session, target_cam=target)
             self.worker.finished.connect(self._on_intrinsics_finished)
             self.worker.start()
-        
-        # 1. Disable the button to prevent multiple simultaneous runs
-        # We store a reference to the button to re-enable it later
-        self.intrinsics_btn = self.sender() 
-        self.intrinsics_btn.setEnabled(False)
-        self.intrinsics_btn.setText("CALIBRATING...")
-        
-        self.log_box.append(f"\n>>> Starting Intrinsics Calibration for: {session}")
-        
-        # 2. Start background worker
-        self.worker = IntrinsicsWorker(session)
-        self.worker.finished.connect(self._on_intrinsics_finished)
-        self.worker.start()
 
     def _on_intrinsics_finished(self, success, message):
-        """Rectifies the 'greyed-out' issue by re-enabling the button"""
-        # 3. Reset Button State so it can be pressed again
+        """Rectifies the 'greyed-out' issue by re-enabling the button."""
+        # Reset Button State using the dynamically saved text
         if hasattr(self, 'intrinsics_btn'):
             self.intrinsics_btn.setEnabled(True)
-            self.intrinsics_btn.setText("1. RUN INTRINSICS")
+            if hasattr(self, 'original_btn_text'):
+                self.intrinsics_btn.setText(self.original_btn_text)
         
         if success:
             self.log_box.append(f">>> SUCCESS: {message}")
@@ -3009,21 +3106,59 @@ class OpenCapPro(QMainWindow):
         finally:
             self.root.after(0, lambda: self.btn_intrinsics.config(state=tk.NORMAL, text="A. GENERATE INTRINSICS"))
     
-    def run_pipeline(self, step="all") -> None: # Add step parameter back
+    def run_pipeline(self, step="all") -> None:
         session = self.session_combo.currentText()
-        if not session: return
+        if not session: 
+            return
 
-        dlg = PipelineConfigDialog(self, str(self.data_dir / session))
-        if dlg.exec_() != QDialog.Accepted: return
+        # --- Bypass Dialog for CPU-bound Extrinsics ---
+        if step == "calibrate":
+            config = {
+                "gpu": "0",                
+                "res": "default",          
+                "pose_estimator": "openpose",  
+                "trials": ["calibration"]  
+            }
+            
+            self.current_pipeline_config = {
+                "session": session,
+                "args": config,
+                "step": step 
+            }
+            
+            self.log_box.append("\n>>> Starting Extrinsics Calibration (CPU Mode)...")
+            self._start_pipeline_process(session, config, step=step)
+            return
+
+        # --- NEW: Pre-scan for processed Pose Data ---
+        valid_pose_tags = []
+        cam0_dir = self.data_dir / session / "Videos" / "Cam0"
+        
+        if cam0_dir.exists():
+            for d in cam0_dir.iterdir():
+                if d.is_dir() and d.name.startswith("OutputPkl_"):
+                    # Extract the exact identifier (e.g., "RTMPose_m" or "OpenPose_1x736")
+                    valid_pose_tags.append(d.name.replace("OutputPkl_", ""))
+
+        # Hard stop if they click Kinematics but haven't run any Pose estimation
+        if step == "kinematics" and not valid_pose_tags:
+            QMessageBox.warning(self, "No Pose Data", "No processed pose data found in this session.\n\nPlease run '3. Run Pose' first.")
+            return
+        # ---------------------------------------------
+
+        # Pass the step and valid_tags to the dialog
+        dlg = PipelineConfigDialog(self, str(self.data_dir / session), step=step, valid_tags=valid_pose_tags)
+        if dlg.exec_() != QDialog.Accepted: 
+            return
+            
         config = dlg.get_data()
         
         self.current_pipeline_config = {
             "session": session,
             "args": config,
-            "step": step # Save the step in config
+            "step": step 
         }
 
-        # Pass the step to the process starter
         self._start_pipeline_process(session, config, step=step)
 
     def _start_pipeline_process(self, session, config, step="all"): # Add step parameter
@@ -3136,9 +3271,8 @@ class OpenCapPro(QMainWindow):
                 if mixed_dlg.exec_() == QDialog.Accepted:
                     cam_model_map = mixed_dlg.get_config()
                 else:
-                    return # Cancel session creation if mixed config is cancelled
+                    return 
             else:
-                # Standard single-type logic
                 base_model = "Generic_Webcam"
                 if data['cam_type'] == "iPhone":
                     base_model = "iPhone_Auto_Detect"
