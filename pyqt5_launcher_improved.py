@@ -24,6 +24,7 @@ import re
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any
 from enum import Enum
+from PyQt5.QtWidgets import QStackedWidget
 
 # --- FORCE PYQT5 ---
 os.environ["QT_API"] = "pyqt5"
@@ -2455,6 +2456,12 @@ class OpenCapPro(QMainWindow):
         is_visible = self.toggle_import_btn.isChecked()
         self.import_content.setVisible(is_visible)
         self.toggle_import_btn.setText("▼ IMPORT TRIAL" if is_visible else "▶ IMPORT TRIAL")
+
+    def _toggle_pipeline_visibility(self):
+        """Minimizes the pipeline section to save space."""
+        is_visible = self.toggle_pipeline_btn.isChecked()
+        self.pipeline_content.setVisible(is_visible)
+        self.toggle_pipeline_btn.setText("▼ PIPELINE EXECUTION" if is_visible else "▶ PIPELINE EXECUTION")
     
     def _get_trial_type_tooltip(self, trial_type: TrialType) -> str:
         """Get tooltip text for trial type"""
@@ -2467,14 +2474,28 @@ class OpenCapPro(QMainWindow):
         return tooltips.get(trial_type, "")
     
     def _create_pipeline_strip(self):
-        """Create pipeline control buttons with Research Mode toggle"""
-        from PyQt5.QtWidgets import QStackedWidget
+        """Creates the pipeline execution buttons inside a collapsible container."""
+        self.pipeline_container = QFrame()
+        self.pipeline_container.setObjectName("ImportPanel") 
+        container_layout = QVBoxLayout(self.pipeline_container)
+
+        # --- Header Row (Toggle Button ONLY) ---
+        header_row = QHBoxLayout()
+        self.toggle_pipeline_btn = QPushButton("▼ PIPELINE EXECUTION")
+        self.toggle_pipeline_btn.setCheckable(True)
+        self.toggle_pipeline_btn.setChecked(True)
+        self.toggle_pipeline_btn.setStyleSheet("text-align: left; font-weight: bold; border: none; background: none;")
+        self.toggle_pipeline_btn.clicked.connect(self._toggle_pipeline_visibility)
         
-        strip = QWidget()
-        strip_layout = QVBoxLayout(strip)
-        strip_layout.setContentsMargins(20, 10, 20, 10)
+        header_row.addWidget(self.toggle_pipeline_btn)
+        container_layout.addLayout(header_row)
+
+        # --- CONTENT WRAPPER (Hidden when toggled) ---
+        self.pipeline_content = QWidget()
+        strip_layout = QVBoxLayout(self.pipeline_content)
+        strip_layout.setContentsMargins(10, 0, 10, 10)
         
-        # --- TOGGLE SWITCH ---
+        # --- RESEARCH MODE TOGGLE (Moved inside the collapsible area) ---
         toggle_layout = QHBoxLayout()
         self.research_mode_cb = QCheckBox("Research Mode (Granular Controls)")
         self.research_mode_cb.setStyleSheet("font-weight: bold; color: #888;")
@@ -2491,52 +2512,52 @@ class OpenCapPro(QMainWindow):
         clin_layout = QHBoxLayout(self.clinical_page)
         clin_layout.setContentsMargins(0, 0, 0, 0)
         
-        calibration_btn_clin = QPushButton("1. RUN INTRINSICS")
+        calibration_btn_clin = QPushButton("1. Process Intrinsics")
         calibration_btn_clin.setFixedHeight(Config.BUTTON_HEIGHT)
         calibration_btn_clin.clicked.connect(self.run_intrinsics)
         
-        pipeline_btn = QPushButton("2. RUN PIPELINE")
-        pipeline_btn.setObjectName("AccentButton") # Keeps the bright color
+        pipeline_btn = QPushButton("2. Run Full Pipeline")
+        pipeline_btn.setObjectName("AccentButton")
         pipeline_btn.setFixedHeight(Config.BUTTON_HEIGHT)
         pipeline_btn.clicked.connect(lambda: self.run_pipeline(step="all"))
         
-        clin_layout.addWidget(calibration_btn_clin)
-        clin_layout.addWidget(pipeline_btn)
+        clin_layout.addWidget(calibration_btn_clin, 1) 
+        clin_layout.addWidget(pipeline_btn, 3)         
         
         # 2. RESEARCH PAGE
         self.research_page = QWidget()
         res_layout = QHBoxLayout(self.research_page)
         res_layout.setContentsMargins(0, 0, 0, 0)
         
-        calibration_btn_res = QPushButton("1. Run Intrinsics")
+        calibration_btn_res = QPushButton("1. Process Intrinsics")
         calibration_btn_res.setFixedHeight(Config.BUTTON_HEIGHT)
         calibration_btn_res.clicked.connect(self.run_intrinsics)
         
-        # --- NEW: Dedicated Extrinsics Button ---
         btn_extrinsics = QPushButton("2. Calibrate Extrinsics")
         btn_extrinsics.setFixedHeight(Config.BUTTON_HEIGHT)
         btn_extrinsics.clicked.connect(lambda: self.run_pipeline(step="calibrate"))
         
-        # --- CHANGED: Pose Estimator now acts as Step 3 ---
-        btn_pose = QPushButton("3. Run Pose")
+        btn_pose = QPushButton("3. 2D Pose Estimation")
         btn_pose.setFixedHeight(Config.BUTTON_HEIGHT)
         btn_pose.clicked.connect(lambda: self.run_pipeline(step="pose"))
         
-        btn_kinematics = QPushButton("4. Triangulate & OpenSim")
+        btn_kinematics = QPushButton("4. 3D Pose and OpenSim")
         btn_kinematics.setFixedHeight(Config.BUTTON_HEIGHT)
         btn_kinematics.clicked.connect(lambda: self.run_pipeline(step="kinematics"))
         
-        res_layout.addWidget(calibration_btn_res)
-        res_layout.addWidget(btn_extrinsics)
-        res_layout.addWidget(btn_pose)
-        res_layout.addWidget(btn_kinematics)
+        res_layout.addWidget(calibration_btn_res, 1)
+        res_layout.addWidget(btn_extrinsics, 1)
+        res_layout.addWidget(btn_pose, 1)
+        res_layout.addWidget(btn_kinematics, 1)
         
         # Add pages to stack
         self.pipeline_stack.addWidget(self.clinical_page)
         self.pipeline_stack.addWidget(self.research_page)
         
         strip_layout.addWidget(self.pipeline_stack)
-        self.main_layout.addWidget(strip)
+        container_layout.addWidget(self.pipeline_content)
+        
+        self.main_layout.addWidget(self.pipeline_container)
 
     def _toggle_research_mode(self, checked):
         """Swaps the visible button panel"""
@@ -2550,25 +2571,28 @@ class OpenCapPro(QMainWindow):
     def _create_dashboard(self):
         """Initialize visualization dashboard with dynamic scaling."""
         self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter.setContentsMargins(0, 5, 0, 0) 
         
         # Left: Trial tree
         self.tree = QTreeWidget()
-        self.tree.setFixedWidth(Config.TREE_WIDTH)
-        self.tree.setHeaderHidden(True)
         
+        # --- FIX: Swap fixed width for minimum width ---
+        self.tree.setMinimumWidth(100) 
+        # -----------------------------------------------
+        
+        self.tree.setHeaderHidden(True)
         self.tree.itemClicked.connect(self.on_tree_click)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._show_tree_context_menu)
-        
         self.splitter.addWidget(self.tree)
         
         # Center: 3D viewer
         self.skeleton_viewer = SkeletonViewer3D(geometry_path=self.app_path / "Geometry")
         self.splitter.addWidget(self.skeleton_viewer)
         
-        # Right: Video player (Minimum width instead of Fixed width)
+        # Right: Video player 
         self.video_container = QWidget()
-        self.video_container.setMinimumWidth(400) # Allows splitter to expand/contract
+        self.video_container.setMinimumWidth(300) 
         video_layout = QVBoxLayout(self.video_container)
         
         self.video_player = DualVideoPlayer()
@@ -2576,8 +2600,8 @@ class OpenCapPro(QMainWindow):
         video_layout.addWidget(self.video_player)
         self.splitter.addWidget(self.video_container)
         
+        # The splitter will still use these as the default starting sizes
         self.splitter.setSizes([300, 600, 600])
-        self.main_layout.addWidget(self.splitter, 1)
     
     def _create_log_area(self):
         """Create log output area with progress bar"""
