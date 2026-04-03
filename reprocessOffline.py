@@ -344,16 +344,18 @@ def run_openpose_direct(session_path, trial_name, pose_folder_name):
             '--num_gpu_start', str(OPENPOSE_GPU_START)
         ]
 
-        # Use the resolution string from the folder name
-        res_override = pose_folder_name.split('_')[-1]
+        # Safely extract the resolution string by stripping the prefix
+        res_override = pose_folder_name.replace('OpenPose_', '')
 
         if res_override != 'default':
+            # This isolates "1x736" from "1x736_2scales"
             base_res = res_override.split('_')[0]
             cmd.extend(['--net_resolution', f"-{base_res}"])
-            if '_2scales' in res_override:
+            
+            if '2scales' in res_override:
                 print(f"    [CONFIG] Enabling 2-Scale Processing (High Accuracy)")
                 cmd.extend(['--scale_number', '2', '--scale_gap', '0.75'])
-            elif '_4scales' in res_override:
+            elif '4scales' in res_override:
                 cmd.extend(['--scale_number', '4', '--scale_gap', '0.25'])
             
         try: 
