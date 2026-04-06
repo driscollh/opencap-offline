@@ -9,6 +9,8 @@ I recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graph
 ## Prerequisites
 * Python 3.9.25
 * Git
+* NVIDIA GPU (RTX 3000 series or 4000 series recommended) - this setup is not yet suitable for GPUs with Blackwell architecture
+* Anaconda or Miniconda
 
 ## Installation & Setup
 
@@ -16,16 +18,21 @@ I recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graph
 Clone this repository to your local machine:
 `git clone https://github.com/driscollh/opencap-offline.git`
 
-**2. Install Python Packages**
+**2. Create a Python Environment with OpenSim**
+conda create -n opencap_env python=3.9 -y
+conda activate opencap_env
+conda install -c opensim-org opensim=4.4 -y
+
+**3. Install Python Packages**
 Navigate into the main folder and install the required Python environment packages:
 `pip install -r requirements.txt`
 
-**3. Download the Local Dependencies (Required)**
+**4. Download the Local Dependencies (Required)**
 Because the machine learning models and background engines (OpenPose, FFmpeg) are too large for GitHub, they are hosted securely on Zenodo.
 * Go to the Zenodo archive: [https://doi.org/10.5281/zenodo.19325950](https://doi.org/10.5281/zenodo.19325950)
 * Download the `dependencies.zip` file.
 * Extract the contents directly into the empty `dependencies/` folder inside this project. This should result in three separate subfolders, one for each key dependency.
-* Extract the `RTMPose.zip` file directly into the main project folder. This should be titled "Blackwell_RTMPose", and contain a `dependencies/` folder and `mmcv/` folder.
+* Extract the `RTMPose.zip` file directly into the main project folder next to `pyqt5_launcher_improved.py`. This folder should be titled "Blackwell_RTMPose", and contain a `dependencies/` folder and `mmcv/` folder.
 
 ## Usage
 Once the environment is set up and the dependencies are in place, you can launch the local processing by running the main Python script in your environment:
