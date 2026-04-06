@@ -48,10 +48,22 @@ dll_path = os.path.abspath(os.path.join(base_path, target_env, 'Library', 'bin')
 
 if os.path.exists(dll_path):
     print(f"[GPU CONFIG] Target Card: {args.gpu_index} | Forcing DLLs from: {target_env}")
-    # Clear the PATH variable to ensure NO other CUDA versions interfere
     os.environ['PATH'] = dll_path + os.pathsep + os.environ['PATH']
-    # Force Windows to use THIS directory for the 5060 process
     os.add_dll_directory(dll_path)
+
+# --- SMART FFMPEG FALLBACK ---
+# Check if FFmpeg is already installed globally on the user's system
+if shutil.which('ffmpeg') is None:
+    print("[SYSTEM] System FFmpeg not found. Falling back to bundled portable FFmpeg.")
+    # Assuming your Zenodo zip extracts to: opencap-portable_prod/dependencies/ffmpeg/bin
+    ffmpeg_path = os.path.abspath(os.path.join(base_path, 'dependencies', 'ffmpeg', 'bin'))
+    
+    if os.path.exists(ffmpeg_path):
+        os.environ['PATH'] = ffmpeg_path + os.pathsep + os.environ['PATH']
+    else:
+        print(f"[WARNING] Bundled FFmpeg not found at {ffmpeg_path}. Video processing may fail.")
+else:
+    print("[SYSTEM] System FFmpeg detected.")
 
 # Force the environment variable for the subprocesses to use the correct card
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_index
