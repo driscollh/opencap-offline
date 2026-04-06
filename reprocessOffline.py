@@ -39,17 +39,20 @@ args = get_args()
 # Get the absolute path to your portable folder
 base_path = os.path.dirname(os.path.abspath(__file__))
 
-# --- STRICT DLL ISOLATION ---
-# Permanently route all DLLs to the standard environment
-target_env = "python_env"
-
-# Use the full absolute path
-dll_path = os.path.abspath(os.path.join(base_path, target_env, 'Library', 'bin'))
+# --- STRICT DLL ISOLATION (Updated) ---
+# Route DLLs to the specific OpenPose bin folder where CUDA libs reside
+dll_path = os.path.abspath(os.path.join(base_path, 'dependencies', 'openpose', 'bin'))
 
 if os.path.exists(dll_path):
-    print(f"[GPU CONFIG] Target Card: {args.gpu_index} | Forcing DLLs from: {target_env}")
+    print(f"[GPU CONFIG] Target Card: {args.gpu_index} | Forcing DLLs from: {dll_path}")
+    # Update the system PATH for the current process and all future subprocesses
     os.environ['PATH'] = dll_path + os.pathsep + os.environ['PATH']
-    os.add_dll_directory(dll_path)
+    
+    # This helps Python load dynamic libraries (like cv2)
+    if sys.platform == 'win32':
+        os.add_dll_directory(dll_path)
+else:
+    print(f"[WARNING] DLL directory not found at: {dll_path}")
 
 # --- SMART FFMPEG FALLBACK ---
 # Check if FFmpeg is already installed globally on the user's system
