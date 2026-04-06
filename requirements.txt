@@ -1,25 +1,25 @@
-# Core OpenCap Dependencies (Cleaned)
+# Core Dependencies
 numpy==1.23.5
 opencv-python==4.5.1.48
 pandas==1.1.5
 scipy==1.9.0
 matplotlib==3.3.4
 pyyaml==5.4.1
-opensim==4.4
 pyvista==0.46.5
 pyvistaqt==0.11.3
 PyQt5==5.15.11
 
-# AI Stack for RTMPose (Crucial for users)
+# AI Stack for RTMPose
 -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.0/index.html
 mmcv==2.0.1
 mmengine==0.8.4
 mmdet==3.1.0
 mmpose==1.1.0
 
-# Deep Learning Backend
-torch>=2.0.0
-torchvision
+# Deep Learning Backend (Pinned to match MMCV)
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.0.1+cu118
+torchvision==0.15.2+cu118
 tensorflow-gpu==2.9.3
 
 # Utilities
