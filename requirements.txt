@@ -25,3 +25,4 @@ tensorflow-gpu==2.9.3
 # Utilities
 ffmpeg-python==0.2.0
 requests
+python-decouple

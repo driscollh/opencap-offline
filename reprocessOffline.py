@@ -433,10 +433,13 @@ def ensure_session_resources(session_path, trials, pose_folder_name):
             print(f"[FAILSAFE] Created missing directory: {folder}")
 
 def run_rtmpose_direct(session_path, trial_name, gpu_id, model_type, pose_folder_name):
-    python_exe = os.path.join(base_path, "python_env", "python.exe")
-    # Tell it to look in the root folder instead
+    # Use the active Python interpreter (Conda environment)
+    python_exe = sys.executable 
+    
+    # Point to the script in the root directory
     rtmpose_script = os.path.join(base_path, "run_rtmpose.py")
-    print(f">>> [RTX 3060 DETECTED] Routing RTMPose through stable python_env engine...")
+    
+    print(f">>> [RTX 3060 DETECTED] Routing RTMPose through active python engine...")
 
     for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
         input_vid = os.path.join(cf, 'InputMedia', trial_name, f"{trial_name}.mp4")
@@ -451,7 +454,7 @@ def run_rtmpose_direct(session_path, trial_name, gpu_id, model_type, pose_folder
                "--video", input_vid, 
                "--output_dir", output_dir, 
                "--video_out", video_out_dir,
-               "--gpu", "0", # <-- FIX: Hardcode to 0 because CUDA_VISIBLE_DEVICES handles the isolation
+               "--gpu", "0", # Hardcode to 0 because CUDA_VISIBLE_DEVICES handles the isolation
                "--model_complexity", model_type]
         
         print(f"%%STATUS: Running RTMPose ({model_type}) for {trial_name}...")
