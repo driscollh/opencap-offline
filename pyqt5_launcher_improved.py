@@ -3,7 +3,7 @@
 # Author: Harry G. Driscoll
 # Date: Jan 2026
 #
-# OpenCap Portable Pro - Motion Capture Processing Launcher
+# OpenCap Offline - Motion Capture Processing Launcher
 # 
 # A comprehensive GUI application for managing motion capture video processing,
 # calibration, and biomechanical analysis workflows.
@@ -2036,7 +2036,7 @@ class MixedCameraDialog(QDialog):
 
 class OpenCapPro(QMainWindow):
     """
-    Main application window for OpenCap Portable Pro.
+    Main application window for OpenCap Offline.
     
     Provides complete interface for session management, video import,
     pipeline execution, and results visualization.
@@ -2063,7 +2063,7 @@ class OpenCapPro(QMainWindow):
         self.process: Optional[QProcess] = None
         
         # Setup window
-        self.setWindowTitle("OpenCap Portable Pro")
+        self.setWindowTitle("OpenCap Offline")
 
         # --- UNIFIED THEME LOADING ---
         # Default to dark mode for fresh installs
@@ -2098,7 +2098,7 @@ class OpenCapPro(QMainWindow):
 
         self.refresh_sessions()
         
-        logger.info("OpenCap Portable Pro initialized")
+        logger.info("OpenCap Offline initialized")
 
     def _handle_stdout(self):
         """Read output from the running pipeline process and update the GUI."""
@@ -3414,9 +3414,9 @@ class OpenCapPro(QMainWindow):
         """Show about dialog"""
         QMessageBox.about(
             self,
-            "About OpenCap Portable Pro",
-            "<h3>OpenCap Portable Pro</h3>"
-            "<p>Version 2.0 (Optimized)</p>"
+            "About OpenCap Offline",
+            "<h3>OpenCap Offline</h3>"
+            "<p>Version 2.1 (Optimized)</p>"
             "<p>A comprehensive motion capture processing launcher.</p>"
             "<p><b>Features:</b></p>"
             "<ul>"
@@ -3426,7 +3426,6 @@ class OpenCapPro(QMainWindow):
             "<li>3D skeletal visualization</li>"
             "<li>Synchronized video playback</li>"
             "</ul>"
-            "<p>© 2024 OpenCap Team</p>"
         )
     
     # -------------------------------------------------------------------------
@@ -3575,7 +3574,7 @@ def main():
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     
     app = QApplication(sys.argv)
-    app.setApplicationName("OpenCap Portable Pro")
+    app.setApplicationName("OpenCap Offline")
     app.setOrganizationName("OpenCap")
     
     # Create and show main window
