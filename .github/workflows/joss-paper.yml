@@ -1,0 +1,22 @@
+name: Build JOSS Paper
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Allows you to run it manually from the Actions tab
+
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    name: Compile Paper
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Build draft PDF
+        uses: openjournals/openjournals-draft-action@master
+        with:
+          journal: joss
+          paper-path: paper.md
