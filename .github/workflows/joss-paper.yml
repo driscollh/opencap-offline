@@ -1,4 +1,4 @@
-name: Draft PDF
+name: Draft_PDF
 on:
   push:
     paths:
