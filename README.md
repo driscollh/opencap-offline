@@ -29,7 +29,7 @@ Navigate into the main folder and install the required Python environment packag
 
 **4. Download the Local Dependencies (Required)**
 Because the machine learning models and background engines (OpenPose, FFmpeg) are too large for GitHub, they are hosted securely on Zenodo.
-* Go to the Zenodo archive: [https://doi.org/10.5281/zenodo.19325950](https://doi.org/10.5281/zenodo.19325950)
+* Go to the V3 Zenodo archive: [https://doi.org/10.5281/zenodo.19447679](https://doi.org/10.5281/zenodo.19447679)
 * Download the `dependencies.zip` file.
 * Extract the contents directly into the empty `dependencies/` folder inside this project. This should result in three separate subfolders, one for each key dependency.
 * Extract the `RTMPose.zip` file directly into the main project folder next to `pyqt5_launcher_improved.py`. This folder should be titled "Blackwell_RTMPose", and contain a `dependencies/` folder and `mmcv/` folder.
