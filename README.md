@@ -6,6 +6,9 @@ I recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graph
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
 
+## 🔔 Stay Updated
+**Never miss a new feature or bug fix.** Click the **Watch** button at the top right of this GitHub page, select **Custom**, and check the box for **Releases**. GitHub will automatically send you an email notification whenever a new version of OpenCap Offline is published!
+
 ## Prerequisites
 * Python 3.9.25
 * Git
