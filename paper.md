@@ -39,6 +39,10 @@ Markerless motion capture has significantly lowered the barrier to entry for bio
 
 # Acknowledgements
 
-The author would like to acknowledge the developers of the original open-source tools on which the computational heavy-lifting of this software is based. Specifically, gratitude is extended to the original OpenCap team for their work and for sharing their open-source methodologies, the ongoing OpenSim project for providing a robust and versatile biomechanical modelling environment, and the developers of OpenPose and RTMPose (OpenMMLab) for their accessible computer vision frameworks. This project was conducted independently and received no specific external funding.
+The authors would like to acknowledge the developers of the original open-source tools on which the computational heavy-lifting of this software is based. Specifically, gratitude is extended to the original OpenCap team for their work and for sharing their open-source methodologies, the ongoing OpenSim project for providing a robust and versatile biomechanical modelling environment, and the developers of OpenPose and RTMPose (OpenMMLab) for their accessible computer vision frameworks. This project received no specific external funding and the authors have no conflicts of interest to declare.
+
+# AI usage disclosure
+
+The authors acknowledge the use of AI tools in assisting with the development of this software. Specifically, Gemini 3.1 pro was used to assist in the development of the graphical user interface layout and python code interaction, and to identify segments of the code that needed to be edited to remove online connection. The authors assert that human authors reviewed and edited all code, validated all AI-assisted outputs, and made the core design decisions.
 
 # References
