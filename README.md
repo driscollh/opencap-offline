@@ -26,8 +26,8 @@ Clone this repository to your local machine:
 `conda activate opencap_env`  
 `conda install -c opensim-org opensim=4.4 -y`
 
-**3. Install the Correct Chumpy Version**
-Navigate into the main folder
+**3. Install the Correct Chumpy Version**  
+Navigate into the main folder  
 `pip install chumpy==0.70 --no-build-isolation`
 
 **4. Install CPython Packages**  
