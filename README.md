@@ -26,11 +26,15 @@ Clone this repository to your local machine:
 `conda activate opencap_env`  
 `conda install -c opensim-org opensim=4.4 -y`
 
-**3. Install Python Packages**  
+**3. Install the Correct Chumpy Version**
+Navigate into the main folder
+`pip install chumpy==0.70 --no-build-isolation`
+
+**4. Install CPython Packages**  
 Navigate into the main folder and install the required Python environment packages:  
 `pip install -r requirements.txt`
 
-**4. Download the Local Dependencies (Required)**  
+**5. Download the Local Dependencies (Required)**  
 Because the machine learning models and background engines (OpenPose, FFmpeg) are too large for GitHub, they are hosted securely on Zenodo.  
 * Go to the V3 Zenodo archive: [https://doi.org/10.5281/zenodo.19447679](https://doi.org/10.5281/zenodo.19447679)  
 * Download the `dependencies.zip` file.  
