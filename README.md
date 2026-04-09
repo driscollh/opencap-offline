@@ -22,9 +22,9 @@ Clone this repository to your local machine:
 `git clone https://github.com/driscollh/opencap-offline.git`
 
 **2. Create a Python Environment with OpenSim**  
-conda create -n opencap_env python=3.9 -y  
-conda activate opencap_env  
-conda install -c opensim-org opensim=4.4 -y
+`conda create -n opencap_env python=3.9 -y`  
+`conda activate opencap_env`  
+`conda install -c opensim-org opensim=4.4 -y`
 
 **3. Install Python Packages**  
 Navigate into the main folder and install the required Python environment packages:  
