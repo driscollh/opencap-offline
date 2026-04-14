@@ -1,12 +1,11 @@
 # OpenCap-Offline
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19562446.svg)](https://doi.org/10.5281/zenodo.19562446)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
 
 A fully offline, localized implementation of Stanford NMBL's OpenCap. This version adapts the original cloud-based processing pipeline to run entirely on a local machine, ensuring strict data privacy and allowing for use in environments without internet access.
 This version of the software requires a sufficiently powerful GPU, but cannot run on blackwell architecture cards (i.e. Nvidia 50-series cards). 
 I recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graphics ram.
-
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
 
 ## 🔔 Stay Updated
 **Never miss a new feature or bug fix.** Click the **Watch** button at the top right of this GitHub page, select **Custom**, and check the box for **Releases**. GitHub will automatically send you an email notification whenever a new version of OpenCap Offline is published!
