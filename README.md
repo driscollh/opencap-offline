@@ -29,12 +29,12 @@ Clone this repository to your local machine:
 
 **3. Install the Correct Chumpy Version**  
 Navigate into the main folder  
-`pip install chumpy==0.70 --no-build-isolation`
+`pip install chumpy==0.70 --no-build-isolation --no-deps`
 
 **4. Install CPython and OpenSim Packages**  
 Navigate into the main folder and install the required Python environment packages, followed by opensim:  
-`pip install -r requirements.txt`  
-`conda install -c opensim-org opensim=4.4 -y`
+`conda install -c opensim-org opensim=4.4 -y`  
+`pip install --no-cache-dir -r requirements.txt`  
 
 **5. Download the Local Dependencies (Required)**  
 Because the machine learning models and background engines (OpenPose, FFmpeg) are too large for GitHub, they are hosted securely on Zenodo.  
