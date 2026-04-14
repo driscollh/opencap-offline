@@ -16,13 +16,13 @@ mmengine==0.8.4
 mmdet==3.1.0
 mmpose==1.1.0
 
-# Deep Learning Backend (Pinned to match MMCV)
+# Deep Learning Backend
 --extra-index-url https://download.pytorch.org/whl/cu118
 torch==2.0.1+cu118
 torchvision==0.15.2+cu118
 tensorflow-gpu==2.9.3
 
-# Utilities
+# Server & Network Utilities
+requests==2.32.5
 ffmpeg-python==0.2.0
-requests
-python-decouple
+python-decouple==3.8
