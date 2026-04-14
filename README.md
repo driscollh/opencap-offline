@@ -54,6 +54,26 @@ or
 Unlike the online version of OpenCap, this offline version requires additional video capture for calibration of camera intrinsics and extrinsics.  
 Please consult the `recording_practices.pdf` file prior to data collection.
 
+## Citation
+
+If you use OpenCap Offline in your research or clinical workflow, please cite it using the following DOI:
+
+**APA:**
+> Driscoll, H. G. (2026). OpenCap Offline (Version 2.1.1) [Computer software]. https://doi.org/10.5281/zenodo.19562446
+
+**BibTeX:**
+```bibtex
+@software{opencap_offline_2026,
+  author       = {Driscoll, Harry G.},
+  title        = {OpenCap Offline},
+  month        = apr,
+  year         = 2026,
+  publisher    = {Zenodo},
+  version      = {2.1.1},
+  doi          = {10.5281/zenodo.19562446},
+  url          = {[https://doi.org/10.5281/zenodo.19562446](https://doi.org/10.5281/zenodo.19562446)}
+}
+
 ## Acknowledgments and Licensing  
 This project is built upon the original open-source OpenCap project by the Stanford Neuromuscular Biomechanics Laboratory.   
 * **Original OpenCap:** [https://github.com/opencap-org/opencap-core](https://github.com/opencap-org/opencap-core)
