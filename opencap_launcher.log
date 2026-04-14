@@ -62,3 +62,9 @@
 2026-04-07 13:27:51,938 - __main__ - INFO - SUCCESS: Media loaded successfully.
 2026-04-07 13:27:56,788 - __main__ - INFO - Research Mode Enabled: Granular execution unlocked.
 2026-04-07 13:28:26,624 - __main__ - INFO - Application closing
+2026-04-14 11:52:46,987 - __main__ - INFO - Refreshing sessions
+2026-04-14 11:52:46,988 - __main__ - INFO - Found 0 session(s)
+2026-04-14 11:52:46,988 - __main__ - INFO - Sessions refreshed
+2026-04-14 11:52:46,988 - __main__ - INFO - OpenCap Offline initialized
+2026-04-14 11:52:47,242 - __main__ - INFO - Application started
+2026-04-14 11:52:56,933 - __main__ - INFO - Application closing

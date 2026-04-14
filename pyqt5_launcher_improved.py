@@ -21,10 +21,10 @@ import json
 import yaml
 import logging
 import re
+import requests
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any
 from enum import Enum
-from PyQt5.QtWidgets import QStackedWidget
 
 # --- FORCE PYQT5 ---
 os.environ["QT_API"] = "pyqt5"
@@ -38,17 +38,21 @@ from PyQt5.QtWidgets import (
     QComboBox, QPushButton, QTreeWidget, QTreeWidgetItem, QFrame, QSplitter,
     QSlider, QStyle, QFileDialog, QMessageBox, QDialog, QLineEdit, QFormLayout,
     QCheckBox, QScrollArea, QTextEdit, QRadioButton, QButtonGroup, QGridLayout,
-    QSizePolicy, QProgressBar, QShortcut, QMenuBar, QMenu, QAction, QStatusBar
+    QSizePolicy, QProgressBar, QShortcut, QMenuBar, QMenu, QAction, QStatusBar,
+    QStackedWidget
 )
 from PyQt5.QtCore import (
     Qt, QTimer, pyqtSignal as Signal, QThread, QSize, QProcess, QSettings,
     QRunnable, QThreadPool, pyqtSlot, QRect
 )
 from PyQt5.QtGui import (
-    QImage, QPixmap, QIcon, QColor, QFont, QPalette, QKeySequence, QPainter, QBrush
+    QImage, QPixmap, QIcon, QColor, QFont, QPalette, QKeySequence, QPainter, QBrush,
+    QDesktopServices
 )
 
-from PyQt5.QtCore import QDateTime
+from PyQt5.QtCore import (
+    QDateTime, QUrl
+)
 
 # --- 3D ENGINE ---
 from pyvistaqt import QtInteractor
@@ -402,6 +406,23 @@ class InputValidator:
             return True, "", int_val
         except ValueError:
             return False, f"{field_name} must be a valid integer", None
+
+class UpdateCheckerThread(QThread):
+    """Checks GitHub for updates in the background so the GUI doesn't freeze."""
+    finished_check = Signal(str, str) 
+
+    def run(self):
+        api_url = "https://api.github.com/repos/driscollh/opencap-offline/releases/latest"
+        try:
+            # Quick 3-second timeout
+            response = requests.get(api_url, timeout=3)
+            if response.status_code == 200:
+                latest = response.json().get("tag_name", "")
+                self.finished_check.emit(latest, "")
+            else:
+                self.finished_check.emit("", f"API Error {response.status_code}")
+        except Exception as e:
+            self.finished_check.emit("", "Offline or Timeout")
 
 class IntrinsicsWorker(QThread):
     """
@@ -2044,6 +2065,9 @@ class OpenCapPro(QMainWindow):
     
     def __init__(self):
         super().__init__()
+
+        self.current_version = "v2.1.1"
+        self.github_releases_url = "https://github.com/driscollh/opencap-offline/releases/latest"
         
         # Initialize paths
         self.app_path = Path(__file__).parent.resolve()
@@ -2099,6 +2123,30 @@ class OpenCapPro(QMainWindow):
         self.refresh_sessions()
         
         logger.info("OpenCap Offline initialized")
+
+        self.update_thread = UpdateCheckerThread()
+        self.update_thread.finished_check.connect(self._log_version_status)
+        self.update_thread.start()
+
+    def _log_version_status(self, latest_version, error):
+        """Appends the version check results directly to the log box on startup."""
+        self.log_box.append("\n--- Version Status ---")
+        self.log_box.append(f"Current Version: <b>{self.current_version}</b>")
+        
+        if latest_version:
+            if latest_version != self.current_version:
+                # Orange warning text, but the URL is just plain text
+                self.log_box.append(f"<span style='color: #ffaa00;'><b>New version available ({latest_version})!</b></span>")
+                self.log_box.append(f"Please download from: {self.github_releases_url}")
+            else:
+                # Green success text
+                self.log_box.append("<span style='color: #00aa00;'>You are running the current version.</span>")
+        else:
+            self.log_box.append(f"<span style='color: #888;'><i>Unable to check for updates ({error})</i></span>")
+            
+        # Auto-scroll to ensure the user sees the message
+        sb = self.log_box.verticalScrollBar()
+        sb.setValue(sb.maximum())
 
     def _handle_stdout(self):
         """Read output from the running pipeline process and update the GUI."""
@@ -2287,6 +2335,10 @@ class OpenCapPro(QMainWindow):
         about_action = QAction('&About', self)
         about_action.triggered.connect(self._show_about)
         help_menu.addAction(about_action)
+
+        update_action = QAction('&Check for Updates...', self)
+        update_action.triggered.connect(self.manual_update_check)
+        help_menu.addAction(update_action)
 
     # --- FIX 7: THEME TOGGLE FUNCTION ---
     def toggle_theme(self):
@@ -3416,7 +3468,7 @@ class OpenCapPro(QMainWindow):
             self,
             "About OpenCap Offline",
             "<h3>OpenCap Offline</h3>"
-            "<p>Version 2.1 (Optimized)</p>"
+            f"<p><b>Version:</b> {self.current_version}</p>"
             "<p>A comprehensive motion capture processing launcher.</p>"
             "<p><b>Features:</b></p>"
             "<ul>"
@@ -3427,6 +3479,52 @@ class OpenCapPro(QMainWindow):
             "<li>Synchronized video playback</li>"
             "</ul>"
         )
+
+    def manual_update_check(self):
+        """Manually ping GitHub for the latest release version."""
+        api_url = "https://api.github.com/repos/driscollh/opencap-offline/releases/latest"
+        
+        try:
+            # Ping GitHub with a 5-second timeout
+            response = requests.get(api_url, timeout=5)
+            
+            if response.status_code == 200:
+                latest_version = response.json().get("tag_name")
+                
+                if latest_version and latest_version != self.current_version:
+                    # An update is available
+                    msg = QMessageBox(self)
+                    msg.setWindowTitle("Update Available")
+                    msg.setIcon(QMessageBox.Information)
+                    msg.setText(f"A new version of OpenCap Offline (<b>{latest_version}</b>) is available!")
+                    msg.setInformativeText("Would you like to download it now?")
+                    
+                    # Set up Yes/No buttons
+                    download_btn = msg.addButton("Download Update", QMessageBox.AcceptRole)
+                    cancel_btn = msg.addButton("Cancel", QMessageBox.RejectRole)
+                    
+                    msg.exec_()
+                    
+                    if msg.clickedButton() == download_btn:
+                        # Opens the user's default web browser to your GitHub
+                        QDesktopServices.openUrl(QUrl(self.github_releases_url))
+                else:
+                    # They are on the latest version
+                    QMessageBox.information(
+                        self, 
+                        "Up to Date", 
+                        f"You are currently running the latest version ({self.current_version})."
+                    )
+            else:
+                QMessageBox.warning(self, "Error", "Could not check for updates. The GitHub API might be rate-limiting.")
+                
+        except requests.exceptions.RequestException:
+            # Handles lack of internet connection
+            QMessageBox.warning(
+                self, 
+                "Connection Error", 
+                "Could not connect to GitHub. Please check your internet connection."
+            )
     
     # -------------------------------------------------------------------------
     # WINDOW EVENTS
