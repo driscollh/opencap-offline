@@ -33,7 +33,7 @@ Navigate into the main folder
 
 **4. Install CPython and OpenSim Packages**  
 Navigate into the main folder and install the required Python environment packages, followed by opensim:  
-`pip install -r requirements.txt`
+`pip install -r requirements.txt`  
 `conda install -c opensim-org opensim=4.4 -y`
 
 **5. Download the Local Dependencies (Required)**  
