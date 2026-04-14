@@ -1,5 +1,7 @@
 # OpenCap-Offline
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19562446.svg)](https://doi.org/10.5281/zenodo.19562446)
+
 A fully offline, localized implementation of Stanford NMBL's OpenCap. This version adapts the original cloud-based processing pipeline to run entirely on a local machine, ensuring strict data privacy and allowing for use in environments without internet access.
 This version of the software requires a sufficiently powerful GPU, but cannot run on blackwell architecture cards (i.e. Nvidia 50-series cards). 
 I recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graphics ram.
