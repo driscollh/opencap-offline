@@ -1,6 +1,6 @@
 # OpenCap-Offline
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19562446.svg)](https://doi.org/10.5281/zenodo.19562446)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19562446.svg)](https://doi.org/10.5281/zenodo.19562446)  
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
 
 A fully offline, localized implementation of Stanford NMBL's OpenCap. This version adapts the original cloud-based processing pipeline to run entirely on a local machine, ensuring strict data privacy and allowing for use in environments without internet access.
