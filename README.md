@@ -23,18 +23,18 @@ I recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graph
 Clone this repository to your local machine:  
 `git clone https://github.com/driscollh/opencap-offline.git`
 
-**2. Create a Python Environment with OpenSim**  
+**2. Create a Python Environment**  
 `conda create -n opencap_env python=3.9 -y`  
 `conda activate opencap_env`  
-`conda install -c opensim-org opensim=4.4 -y`
 
 **3. Install the Correct Chumpy Version**  
 Navigate into the main folder  
 `pip install chumpy==0.70 --no-build-isolation`
 
-**4. Install CPython Packages**  
-Navigate into the main folder and install the required Python environment packages:  
+**4. Install CPython and OpenSim Packages**  
+Navigate into the main folder and install the required Python environment packages, followed by opensim:  
 `pip install -r requirements.txt`
+`conda install -c opensim-org opensim=4.4 -y`
 
 **5. Download the Local Dependencies (Required)**  
 Because the machine learning models and background engines (OpenPose, FFmpeg) are too large for GitHub, they are hosted securely on Zenodo.  
