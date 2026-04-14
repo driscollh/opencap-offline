@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Driscoll"
+    given-names: "Harry G."
+    orcid: "https://orcid.org/0000-0003-3845-0456"
+title: "OpenCap Offline"
+version: 2.1.1
+doi: 10.5281/zenodo.19562446
+date-released: 2026-04-14
+url: "https://github.com/driscollh/opencap-offline"
