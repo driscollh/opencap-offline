@@ -204,13 +204,11 @@ def load_custom_intrinsics(cam_folder):
         with open(custom_path, 'rb') as f: return pickle.load(f)
     return None
 
-def visualize_calibration(img, corners, rvec, tvec, intrinsics, save_path):
-    BOARD_DIMS = (5, 4)
-    SQUARE_SIZE_MM = 35
+def visualize_calibration(img, corners, rvec, tvec, intrinsics, save_path, board_dims, square_size_mm):
     if corners is not None:
         for c in corners: cv2.circle(img, (int(c[0,0]), int(c[0,1])), 3, (0, 0, 255), -1)
-    objp = np.zeros((BOARD_DIMS[0]*BOARD_DIMS[1], 3), np.float32)
-    objp[:,:2] = np.mgrid[0:BOARD_DIMS[0], 0:BOARD_DIMS[1]].T.reshape(-1,2) * SQUARE_SIZE_MM
+    objp = np.zeros((board_dims[0]*board_dims[1], 3), np.float32)
+    objp[:,:2] = np.mgrid[0:board_dims[0], 0:board_dims[1]].T.reshape(-1,2) * square_size_mm
     mtx, dist = intrinsics['intrinsicMat'], intrinsics['distortion']
     imgpts, _ = cv2.projectPoints(objp, rvec, tvec, mtx, dist)
     for p in imgpts: cv2.circle(img, (int(p[0,0]), int(p[0,1])), 5, (255, 255, 0), 1)
@@ -222,8 +220,14 @@ def run_auto_calibration(session_path):
     calib_out = os.path.join(session_path, 'CalibrationImages')
     os.makedirs(calib_out, exist_ok=True)
     
-    BOARD_DIMS = (5, 4)
-    SQUARE_SIZE_MM = 35
+    meta_path = os.path.join(session_path, "sessionMetadata.yaml")
+    with open(meta_path, 'r') as f:
+        meta = yaml.safe_load(f)
+        
+    cols = meta['checkerBoard']['black2BlackCornersWidth_n']
+    rows = meta['checkerBoard']['black2BlackCornersHeight_n']
+    SQUARE_SIZE_MM = meta['checkerBoard']['squareSideLength_mm']
+    BOARD_DIMS = (cols, rows)
 
     for cf in sorted(glob.glob(os.path.join(vid_dir, 'Cam*'))):
         input_dir = os.path.join(cf, 'InputMedia', 'calibration')
