@@ -19,6 +19,8 @@ I recommend use with Nvidia 30-series or 40-series cards with minimum 12GB graph
 
 ## Installation & Setup
 
+Due to a number of critical version dependencies, please ensure you complete the following install steps in order:
+
 **1. Download the Code**  
 Clone this repository to your local machine:  
 `git clone https://github.com/driscollh/opencap-offline.git`
@@ -28,7 +30,7 @@ Clone this repository to your local machine:
 `conda activate opencap_env`  
 
 **3. Install the Correct Chumpy Version**  
-Navigate into the main folder  
+Navigate into the main folder:  
 `pip install chumpy==0.70 --no-build-isolation --no-deps`
 
 **4. Install CPython and OpenSim Packages**  
