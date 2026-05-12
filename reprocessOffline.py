@@ -236,7 +236,39 @@ def run_auto_calibration(session_path):
         objp[:,:2] = np.mgrid[0:BOARD_DIMS[0], 0:BOARD_DIMS[1]].T.reshape(-1,2) * SQUARE_SIZE_MM
         
         mtx, dist = intrinsics['intrinsicMat'], intrinsics['distortion']
-        ret, rvec, tvec = cv2.solvePnP(objp, corners, mtx, dist)
+
+        # =========================================================================
+        # --- NEW PLANAR AMBIGUITY SOLVER ---
+        # 1. Get BOTH valid mathematical solutions using IPPE
+        ret_pnp, rvecs, tvecs, reproj = cv2.solvePnPGeneric(objp, corners, mtx, dist, flags=cv2.SOLVEPNP_IPPE)
+        
+        rvec, tvec = rvecs[0], tvecs[0] # Default to the first solution
+        
+        # 2. Check metadata to see if the board is lying flat
+        placement = meta.get('checkerBoard', {}).get('placement', 'Vertical')
+        is_horizontal = placement in ['ground', 'Lying', 'Horizontal']
+        
+        if is_horizontal and len(rvecs) > 1:
+            # Calculate the camera's Z position in the real world (C = -R^T * t)
+            R0, _ = cv2.Rodrigues(rvecs[0])
+            C0 = -np.matrix(R0).T * np.matrix(tvecs[0])
+            
+            R1, _ = cv2.Rodrigues(rvecs[1])
+            C1 = -np.matrix(R1).T * np.matrix(tvecs[1])
+            
+            # OpenCV Object Z points INTO the floor. 
+            # Therefore, a camera ABOVE the floor must have a NEGATIVE Z coordinate.
+            if C0[2] > 0 and C1[2] < 0:
+                print(f"    [AMBIGUITY FIXED] Camera was 'underground'. Swapped to Solution 2.")
+                rvec, tvec = rvecs[1], tvecs[1]
+
+        # 3. Refine the chosen solution with standard Iterative polish
+        ret, rvec, tvec = cv2.solvePnP(
+            objp, corners, mtx, dist, 
+            rvec=rvec, tvec=tvec, 
+            useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE
+        )
+        # =========================================================================
 
         visualize_calibration(frame.copy(), corners, rvec, tvec, intrinsics, os.path.join(calib_out, f'{os.path.basename(cf)}_calib.jpg'))
 

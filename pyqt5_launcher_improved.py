@@ -27,6 +27,7 @@ from typing import Optional, Dict, List, Tuple, Any
 from enum import Enum
 
 # --- FORCE PYQT5 ---
+# --- FORCE PYQT5 ---
 os.environ["QT_API"] = "pyqt5"
 
 # --- MATPLOTLIB CRASH FIX ---
@@ -1141,36 +1142,9 @@ class DualVideoPlayer(QWidget):
         if self.total_frames > 0:
             self.show_frame(self.current_frame)
 
-class BoneRegistry:
-    """Manages loading of external bone meshes."""
-    def __init__(self, geometry_path: Path):
-        self.geometry_path = geometry_path
-        self.meshes = {}
-        self._scan_meshes()
-    
-    def _scan_meshes(self):
-        if not self.geometry_path.exists(): return
-        for f in self.geometry_path.iterdir():
-            if f.suffix.lower() in Config.MESH_EXTENSION:
-                try:
-                    self.meshes[f.stem.lower()] = pv.read(str(f))
-                except Exception:
-                    pass
-
-    def get_mesh(self, bone_name: str) -> Optional[pv.PolyData]:
-        key = bone_name.lower()
-        if key in self.meshes:
-            return self.meshes[key].copy()
-        return None
-
 class SkeletonViewer3D(QtInteractor):
-    def __init__(self, parent=None, geometry_path=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.geometry_path = geometry_path
-        self.bone_registry = None
-        if self.geometry_path:
-            self.bone_registry = BoneRegistry(self.geometry_path)
-            
         self._init_scene()
         self._init_state()
     
@@ -1183,7 +1157,6 @@ class SkeletonViewer3D(QtInteractor):
     def _init_state(self):
         self.skel_actors = {}
         self.markers = None
-        self.bone_pairs = []
 
     def load_trc(self, path: str):
         self.clear_skeleton()
@@ -1196,8 +1169,6 @@ class SkeletonViewer3D(QtInteractor):
             # Header
             header_meta = lines[2].strip().split('\t')
             num_markers = int(header_meta[3])
-            raw_names = lines[3].strip().split('\t')
-            names = [n.strip() for n in raw_names[2:] if n.strip()]
             
             # Data
             data = []
@@ -1219,11 +1190,9 @@ class SkeletonViewer3D(QtInteractor):
                 logger.info("Detected MM units. Scaling to Meters.")
                 self.markers *= 0.001
             
-            # Build Hierarchy
-            self.bone_pairs = self._get_bone_map(names)
-            logger.info(f"Skeleton Loaded: {num_markers} markers. {len(self.bone_pairs)} segments.")
+            logger.info(f"Marker Data Loaded: {num_markers} markers.")
 
-            # Draw Joints
+            # Draw Joints (Markers)
             for i, pos in enumerate(self.markers[0]):
                 sphere = pv.Sphere(radius=Config.SKELETON_JOINT_RADIUS, center=(0,0,0))
                 actor = self.add_mesh(
@@ -1239,272 +1208,111 @@ class SkeletonViewer3D(QtInteractor):
         except Exception as e:
             logger.error(f"TRC Load Error: {e}", exc_info=True)
 
-    def _find_marker_index(self, target_names: List[str], available_names: Dict[str, int]) -> int:
-        for target in target_names:
-            if target.lower() in available_names:
-                return available_names[target.lower()]
-        return -1
-
-    def _get_bone_map(self, names: List[str]) -> List[Tuple]:
-        """
-        Returns definition tuples: 
-        (StartIdx, EndIdx, MeshName, AxisIndex, FixedScale, RotOffset, [OrientL, OrientR])
-        """
-        name_map = {name.lower(): i for i, name in enumerate(names)}
+    def toggle_calibration(self, session_path, show):
+        if not hasattr(self, 'calib_actors'):
+            self.calib_actors = []
         
-        # --- MARKER GROUPS ---
-        hips_center = ['V.Sacral', 'L5_study', 'midHip', 'L.PSIS_study']
-        neck = ['Neck', 'C7_study']
-        head = ['HeadTop', 'Head', 'R.Head', 'L.Head', 'Neck']
+        # Clear existing actors
+        for actor in self.calib_actors:
+            self.remove_actor(actor)
+        self.calib_actors.clear()
         
-        # Shoulders (For Rib Orientation)
-        r_sh = ['r_shoulder_study', 'RShoulder']
-        l_sh = ['L_shoulder_study', 'LShoulder']
-        
-        # Pelvis Width (For Pelvis Orientation)
-        r_asis = ['r.ASIS_study', 'R.ASIS']
-        l_asis = ['L.ASIS_study', 'L.ASIS']
-
-        # Knee/Elbows (For Limb Orientation - "Knee Pointing" vector)
-        r_knee = ['r_knee_study', 'RKnee']
-        l_knee = ['L_knee_study', 'LKnee']
-
-        definitions = [
-            # --- TORSO (Oriented by Shoulders) ---
-            # This locks the ribs to face forward relative to the shoulder line
-            (hips_center, neck, 'hat_spine', 1, False, (0,0,0), l_sh, r_sh),
-            (hips_center, neck, 'hat_ribs_scap', 1, False, (0,0,0), l_sh, r_sh),
-            (neck, head, 'hat_skull', 1, True, (-90,0,0), None, None), # Skull keeps manual offset
-            (neck, head, 'hat_jaw', 1, True, (-90,0,0), None, None),
-
-            # --- PELVIS (Oriented by ASIS) ---
-            # Anchored Center->Spine, Oriented by Left/Right ASIS
-            (hips_center, neck, 'sacrum', 1, True, (90,0,0), l_asis, r_asis),
-            (hips_center, neck, 'l_pelvis', 1, True, (90,0,0), l_asis, r_asis),
-            (hips_center, neck, 'r_pelvis', 1, True, (90,0,0), l_asis, r_asis),
-
-            # --- RIGHT LEG ---
-            (['RHJC_study', 'RHip'], r_knee, 'r_femur', 1, False, (0,0,0), None, None),
-            (r_knee, ['RAnkle', 'r_ankle_study'], 'r_tibia', 1, False, (0,0,0), None, None),
-            (r_knee, ['RAnkle', 'r_ankle_study'], 'r_fibula', 1, False, (0,0,0), None, None),
-            (r_knee, r_knee, 'r_patella', 1, True, (0,0,0), None, None), # Fixed
+        if not show or not session_path:
+            self.render()
+            return
             
-            # --- RIGHT FOOT ---
-            (['RAnkle', 'r_ankle_study'], ['r_toe_study', 'RBigToe'], 'r_foot', 0, True, (0,90,0), None, None),
-            (['RAnkle', 'r_ankle_study'], ['r_toe_study', 'RBigToe'], 'r_talus', 0, False, (0,90,0), None, None),
-            (['r_toe_study', 'RBigToe'], ['r_toe_study', 'RBigToe'], 'r_bofoot', 0, True, (0,90,0), None, None),
-
-            # --- LEFT LEG ---
-            (['LHJC_study', 'LHip'], l_knee, 'l_femur', 1, False, (0,0,0), None, None),
-            (l_knee, ['LAnkle', 'L_ankle_study'], 'l_tibia', 1, False, (0,0,0), None, None),
-            (l_knee, ['LAnkle', 'L_ankle_study'], 'l_fibula', 1, False, (0,0,0), None, None),
-            (l_knee, l_knee, 'l_patella', 1, True, (0,0,0), None, None),
-            
-            # --- LEFT FOOT ---
-            (['LAnkle', 'L_ankle_study'], ['L_toe_study', 'LBigToe'], 'l_foot', 0, True, (0,90,0), None, None),
-            (['LAnkle', 'L_ankle_study'], ['L_toe_study', 'LBigToe'], 'l_talus', 0, False, (0,90,0), None, None),
-            (['L_toe_study', 'LBigToe'], ['L_toe_study', 'LBigToe'], 'l_bofoot', 0, True, (0,90,0), None, None),
-
-            # --- ARMS ---
-            (['RShoulder', 'r_shoulder_study'], ['RElbow', 'r_lelbow_study'], 'humerus_rv', 1, False, (0,0,0), None, None),
-            (['RElbow', 'r_lelbow_study'], ['RWrist', 'r_lwrist_study'], 'radius_rv', 1, False, (0,0,0), None, None),
-            (['RElbow', 'r_lelbow_study'], ['RWrist', 'r_lwrist_study'], 'ulna_rv', 1, False, (0,0,0), None, None),
-            (['RWrist', 'r_lwrist_study'], ['RHand', 'r_finger_study'], 'metacarpal3_rvs', 1, False, (0,0,0), None, None),
-
-            (['LShoulder', 'L_shoulder_study'], ['LElbow', 'L_lelbow_study'], 'humerus_lv', 1, False, (0,0,0), None, None),
-            (['LElbow', 'L_lelbow_study'], ['LWrist', 'L_lwrist_study'], 'radius_lv', 1, False, (0,0,0), None, None),
-            (['LElbow', 'L_lelbow_study'], ['LWrist', 'L_lwrist_study'], 'ulna_lv', 1, False, (0,0,0), None, None),
-            (['LWrist', 'L_lwrist_study'], ['LHand', 'L_finger_study'], 'metacarpal3_lvs', 1, False, (0,0,0), None, None),
-        ]
+        import pickle, glob, os, yaml
+        import numpy as np
         
-        pairs = []
-        for p in definitions:
-            # Unpack variable length tuple (support optional orientation markers)
-            start_opts, end_opts, b_name, axis, fixed, rot, *orient = p
-            
-            s_idx = self._find_marker_index(start_opts, name_map)
-            e_idx = self._find_marker_index(end_opts, name_map)
-            
-            # Orientation Indices (Left/Right)
-            o_l, o_r = (-1, -1)
-            if orient and orient[0] and orient[1]:
-                o_l = self._find_marker_index(orient[0], name_map)
-                o_r = self._find_marker_index(orient[1], name_map)
+        # Load board dimensions from metadata
+        meta_path = os.path.join(session_path, "sessionMetadata.yaml")
+        cols, rows, size = 5, 4, 35.0 # Defaults
+        if os.path.exists(meta_path):
+            with open(meta_path, 'r') as f:
+                meta = yaml.safe_load(f)
+                cols = meta.get('checkerBoard', {}).get('black2BlackCornersWidth_n', 5)
+                rows = meta.get('checkerBoard', {}).get('black2BlackCornersHeight_n', 4)
+                size = meta.get('checkerBoard', {}).get('squareSideLength_mm', 35.0)
+                
+        # Calculate real-world size in meters
+        width_m = (cols - 1) * size * 0.001
+        height_m = (rows - 1) * size * 0.001
 
-            if s_idx != -1:
-                final_end = e_idx if e_idx != -1 else s_idx
-                pairs.append((s_idx, final_end, b_name, axis, fixed, rot, o_l, o_r))
-
-        return pairs
-
-    def _apply_orientation_transform(self, mesh, start, end, orient_l, orient_r, axis_idx):
-        """
-        Computes a rigid transform matrix to align the mesh to a coordinate frame defined 
-        by 3 points: Start, End, and Orientation(L/R).
-        This PREVENTS the 'spinning' artifact during flexion.
-        """
-        # 1. Primary Axis (Longitudinal) - OpenSim Y
-        # Vector from Start to End
-        y_vec = end - start
-        len_y = np.linalg.norm(y_vec)
-        if len_y < 0.0001: return mesh # Degenerate
-        y_vec /= len_y
-
-        # 2. Secondary Axis (Lateral) - OpenSim Z
-        # Vector from Left to Right (e.g. Left Shoulder to Right Shoulder)
-        # Note: OpenSim Z is "Right". So L -> R is +Z.
-        z_vec = orient_r - orient_l
-        len_z = np.linalg.norm(z_vec)
+        # =====================================================================
+        # --- NEW: Pure Yaw Rotation ---
+        # Rotates the entire camera/checkerboard assembly around the vertical axis 
+        # so it faces the front of the OpenSim skeleton (-90 or 90 degrees)
+        yaw_deg = -90 
+        theta = np.radians(yaw_deg)
+        c, s = np.cos(theta), np.sin(theta)
         
-        if len_z < 0.0001:
-            # Fallback if orientation markers missing/degenerate
-            # Assume arbitrary Z if Y is vertical-ish
-            z_vec = np.array([1, 0, 0]) 
-        else:
-            z_vec /= len_z
-
-        # 3. Tertiary Axis (Forward) - OpenSim X
-        # X = Y cross Z ?? No.
-        # OpenSim: Y is Up. Z is Right. X is Forward.
-        # Cross(Up, Right) = Cross(Y, Z) = X (Forward).
-        x_vec = np.cross(y_vec, z_vec)
-        x_len = np.linalg.norm(x_vec)
+        # Rotation Matrix around the Y-axis (Vertical in pre-swizzle space)
+        R_yaw = np.array([
+            [ c, 0, s],
+            [ 0, 1, 0],
+            [-s, 0, c]
+        ])
+        # =====================================================================
         
-        if x_len < 0.0001:
-            # Fallback
-            x_vec = np.array([0, 1, 0])
-        else:
-            x_vec /= x_len
-
-        # 4. Re-Orthogonalize Z (Z = X cross Y)
-        # Ensures 90 degree angles
-        z_vec = np.cross(x_vec, y_vec)
-        z_vec /= np.linalg.norm(z_vec)
-
-        # 5. Construct Rotation Matrix (3x3)
-        # Columns are the new axes [X, Y, Z]
-        # OpenSim mesh assumes Y=Up, Z=Right, X=Fwd.
-        # We want to map:
-        #   Mesh X -> x_vec
-        #   Mesh Y -> y_vec
-        #   Mesh Z -> z_vec
+        # 1. Transform and Draw Checkerboard 
+        raw_center = np.array([width_m / 2.0, height_m / 2.0, 0.0])
+        rot_center = R_yaw @ raw_center
+        center_swizzled = self._swizzle(rot_center)
         
-        rot_mat = np.eye(4)
-        rot_mat[0:3, 0] = x_vec
-        rot_mat[0:3, 1] = y_vec
-        rot_mat[0:3, 2] = z_vec
-        rot_mat[0:3, 3] = start # Translation
+        raw_normal = np.array([0.0, 0.0, 1.0])
+        rot_normal = R_yaw @ raw_normal
+        normal_swizzled = self._swizzle(rot_normal)
 
-        # 6. Apply Transform
-        # First, apply transform to a copy of the mesh
-        # Note: PyVista 'transform' applies 4x4 matrix
-        mesh.transform(rot_mat, inplace=True)
-        return mesh
-
-    def _align_mesh(self, mesh, start, end, b_name, axis_idx, is_fixed, rot_offset, o_l, o_r):
-        """Aligns mesh using either Basic Vector or Full Orientation Frame."""
+        board = pv.Plane(center=center_swizzled, direction=normal_swizzled, i_size=width_m, j_size=height_m)
+        b_actor = self.add_mesh(board, color="black", style="wireframe", line_width=2)
+        self.calib_actors.append(b_actor)
         
-        # --- 1. Unit Fix (MM to M) ---
-        bounds = mesh.bounds
-        native_len = abs(bounds[2*axis_idx+1] - bounds[2*axis_idx])
-        if native_len > 10.0:
-            mesh.scale([0.001, 0.001, 0.001], inplace=True)
-            native_len *= 0.001
-        if native_len < 0.0001: native_len = 1.0
-
-        # --- 2. Scaling ---
-        if not is_fixed:
-            target_len = np.linalg.norm(end - start)
-            scale_ratio = target_len / native_len
-            scales = [scale_ratio, scale_ratio, scale_ratio]
-            # Ensure thickness isn't absurd for wide bones (Pelvis)
-            # If using Orientation (o_l/o_r), we often want Uniform scaling to preserve shape
-            mesh.scale(scales, inplace=True)
+        # 2. Transform and Draw Origin (First Corner)
+        raw_origin = np.array([0.0, 0.0, 0.0])
+        rot_origin = R_yaw @ raw_origin
+        origin_pos = self._swizzle(rot_origin)
         
-        # --- 3. Manual Pre-Rotation (Fix Native Mesh Orientation) ---
-        if rot_offset != (0,0,0):
-            mesh.rotate_x(rot_offset[0], inplace=True)
-            mesh.rotate_y(rot_offset[1], inplace=True)
-            mesh.rotate_z(rot_offset[2], inplace=True)
-
-        # --- 4. Alignment Strategy ---
+        origin_sphere = pv.Sphere(radius=0.02, center=origin_pos)
+        o_actor = self.add_mesh(origin_sphere, color="#6184D8")
+        self.calib_actors.append(o_actor)
         
-        # STRATEGY A: Full Orientation (Torso/Pelvis)
-        # If we have Left/Right orientation markers (e.g. Shoulders/ASIS), use them.
-        # This prevents the "Spinning Ribs" bug.
-        if o_l is not None and o_r is not None:
-             # Important: We must ensure the Mesh origin is (0,0,0) before transforming
-             # But the mesh is already centered at its joint origin.
-             # The _apply_orientation_transform handles Translation to 'start'.
-             return self._apply_orientation_transform(mesh, start, end, o_l, o_r, axis_idx)
-
-        # STRATEGY B: Standard Stick-Figure Alignment (Limbs)
-        # Use existing rotate_vector logic for limbs where roll is less critical
-        else:
-            vec = end - start
-            target_len = np.linalg.norm(vec)
-            if target_len < 0.0001: 
-                mesh.translate(start, inplace=True)
-                return mesh
-            
-            # Standard Vector Alignment
-            direction_sign = 1.0
-            # OpenSim Y=Up. Limbs grow DOWN.
-            if axis_idx == 1 and not ('hat' in b_name or 'spine' in b_name): 
-                direction_sign = -1.0 
-
-            source_vec = np.zeros(3)
-            source_vec[axis_idx] = direction_sign
-            
-            target_vec = vec / target_len
-            rot_axis = np.cross(source_vec, target_vec)
-            dot_val = np.dot(source_vec, target_vec)
-            
-            if np.linalg.norm(rot_axis) < 0.001:
-                if dot_val < 0:
-                    flip = np.array([1,0,0]) if axis_idx != 0 else np.array([0,1,0])
-                    mesh.rotate_vector(vector=flip, angle=180, point=[0,0,0], inplace=True)
-            else:
-                angle_deg = np.degrees(np.arccos(np.clip(dot_val, -1.0, 1.0)))
-                mesh.rotate_vector(vector=rot_axis, angle=angle_deg, point=[0,0,0], inplace=True)
-
-            # Foot Fix (Feet need 90 deg pitch relative to the vector)
-            if 'foot' in b_name or 'talus' in b_name or 'bofoot' in b_name:
-                mesh.rotate_vector(vector=target_vec, angle=90, point=[0,0,0], inplace=True)
-
-            mesh.translate(start, inplace=True)
-            return mesh
-
-    def _update_bone_geometry(self, i, start, end, b_name, axis, fixed, rot, o_l_idx, o_r_idx, frame):
-        new_mesh = None
-        if self.bone_registry:
-            custom_mesh = self.bone_registry.get_mesh(b_name)
-            if custom_mesh:
-                try:
-                    # Get Orientation Marker Positions if indices exist
-                    o_l_pos, o_r_pos = None, None
-                    if o_l_idx != -1 and o_r_idx != -1:
-                        o_l_pos = np.array(self._swizzle(frame[o_l_idx]))
-                        o_r_pos = np.array(self._swizzle(frame[o_r_idx]))
-
-                    new_mesh = self._align_mesh(
-                        custom_mesh, start, end, b_name, axis, fixed, rot, o_l_pos, o_r_pos
-                    )
-                except Exception as e:
-                    pass
-
-        if new_mesh is None and not fixed:
-            line = pv.Line(start, end)
-            new_mesh = line.tube(radius=Config.SKELETON_BONE_RADIUS)
-
-        actor_key = f'bone_{i}'
-        if actor_key in self.skel_actors:
-            self.skel_actors[actor_key].mapper.dataset.DeepCopy(new_mesh)
-        else:
-            color = "#DDDDDD" if new_mesh and new_mesh.n_points > 100 else "#EEEEEE"
-            self.skel_actors[actor_key] = self.add_mesh(
-                new_mesh, color=color, reset_camera=False, render=False
-            )
+        # 3. Transform and Draw Cameras
+        cam_folders = sorted(glob.glob(os.path.join(session_path, "Videos", "Cam*")))
+        for cf in cam_folders:
+            pkl_path = os.path.join(cf, "cameraIntrinsicsExtrinsics.pickle")
+            if os.path.exists(pkl_path):
+                with open(pkl_path, 'rb') as f:
+                    data = pickle.load(f)
+                
+                R = data['rotation']
+                t = data['translation']
+                
+                # Math: Camera Center = -R^T * t
+                C = -np.matrix(R).T @ np.matrix(t)
+                C_m = np.array(C).flatten() * 0.001 # Convert mm to meters
+                
+                # Rotate the Camera Position
+                rot_C = R_yaw @ C_m
+                cam_pos = self._swizzle(rot_C)
+                
+                # Draw Camera as a Cone pointing at the board center
+                look_vec = np.array(center_swizzled) - np.array(cam_pos)
+                cone = pv.Cone(center=cam_pos, direction=look_vec, height=0.15, radius=0.08)
+                c_actor = self.add_mesh(cone, color="#E57373") # Pastel Red
+                self.calib_actors.append(c_actor)
+                
+                # Draw optical ray line
+                line = pv.Line(cam_pos, origin_pos)
+                l_actor = self.add_mesh(line, color="#E57373", line_width=1, opacity=0.5)
+                self.calib_actors.append(l_actor)
+                
+                # Draw Label
+                cam_name = os.path.basename(cf)
+                lbl_actor = self.add_point_labels([cam_pos], [cam_name], point_size=0, font_size=14, text_color="white", name=f"lbl_{cam_name}", shape_opacity=0.3)
+                self.calib_actors.append(lbl_actor)
+                
+        self.reset_camera()
+        self.render()
 
     def update_frame(self, idx: int):
         if self.markers is None: return
@@ -1512,17 +1320,8 @@ class SkeletonViewer3D(QtInteractor):
             frame = self.markers[idx % len(self.markers)]
             for i, pos in enumerate(frame):
                 key = f'joint_{i}'
-                if  key in self.skel_actors:
+                if key in self.skel_actors:
                     self.skel_actors[key].SetPosition(self._swizzle(pos))
-            
-            for i, p in enumerate(self.bone_pairs):
-                # Unpack tuple (Start, End, Name, Axis, Fixed, Rot, OL, OR)
-                p1, p2, b_name, axis, fixed, rot, o_l, o_r = p
-                
-                start = np.array(self._swizzle(frame[p1]))
-                end = np.array(self._swizzle(frame[p2]))
-                
-                #self._update_bone_geometry(i, start, end, b_name, axis, fixed, rot, o_l, o_r, frame)
             
             self.render()
         except Exception as e:
@@ -2128,6 +1927,13 @@ class OpenCapPro(QMainWindow):
         self.update_thread.finished_check.connect(self._log_version_status)
         self.update_thread.start()
 
+    def _toggle_calibration_view(self, checked):
+        """Passes the current session path down to the 3D viewer to draw the cameras."""
+        session = self.session_combo.currentText()
+        if session:
+            session_path = str(self.data_dir / session)
+            self.skeleton_viewer.toggle_calibration(session_path, checked)
+
     def _log_version_status(self, latest_version, error):
         """Appends the version check results directly to the log box on startup."""
         self.log_box.append("\n--- Version Status ---")
@@ -2245,6 +2051,7 @@ class OpenCapPro(QMainWindow):
             # --- NEW: Show Calibration Images ---
             current_step = self.current_pipeline_config.get("step", "all")
             if current_step in ["calibrate", "all"]:
+                self.show_calib_cb.setEnabled(True)
                 session = self.current_pipeline_config['session']
                 calib_dir = self.data_dir / session / "CalibrationImages"
                 
@@ -2547,12 +2354,19 @@ class OpenCapPro(QMainWindow):
         strip_layout = QVBoxLayout(self.pipeline_content)
         strip_layout.setContentsMargins(10, 0, 10, 10)
         
-        # --- RESEARCH MODE TOGGLE (Moved inside the collapsible area) ---
+        # --- RESEARCH MODE & CALIBRATION VIEW TOGGLES ---
         toggle_layout = QHBoxLayout()
         self.research_mode_cb = QCheckBox("Research Mode (Granular Controls)")
         self.research_mode_cb.setStyleSheet("font-weight: bold; color: #888;")
         self.research_mode_cb.toggled.connect(self._toggle_research_mode)
+        
+        self.show_calib_cb = QCheckBox("Show Calibration Setup")
+        self.show_calib_cb.setStyleSheet("font-weight: bold; color: #888;")
+        self.show_calib_cb.setEnabled(False) # Grey out by default
+        self.show_calib_cb.toggled.connect(self._toggle_calibration_view)
+        
         toggle_layout.addStretch()
+        toggle_layout.addWidget(self.show_calib_cb)
         toggle_layout.addWidget(self.research_mode_cb)
         strip_layout.addLayout(toggle_layout)
         
@@ -2639,7 +2453,7 @@ class OpenCapPro(QMainWindow):
         self.splitter.addWidget(self.tree)
         
         # Center: 3D viewer
-        self.skeleton_viewer = SkeletonViewer3D(geometry_path=self.app_path / "Geometry")
+        self.skeleton_viewer = SkeletonViewer3D()
         self.splitter.addWidget(self.skeleton_viewer)
         
         # Right: Video player 
@@ -2950,6 +2764,21 @@ class OpenCapPro(QMainWindow):
                     
             for i in range(self.tree.topLevelItemCount()):
                 restore_state(self.tree.topLevelItem(i), "")
+
+        # --- NEW: Check for Extrinsics to Enable 3D View ---
+        has_extrinsics = False
+        cam_folders = sorted([d for d in video_root.iterdir() if d.is_dir() and d.name.startswith("Cam")])
+        for cf in cam_folders:
+            if (cf / "cameraIntrinsicsExtrinsics.pickle").exists():
+                has_extrinsics = True
+                break
+                
+        self.show_calib_cb.setEnabled(has_extrinsics)
+        if not has_extrinsics and self.show_calib_cb.isChecked():
+            self.show_calib_cb.setChecked(False) 
+        elif has_extrinsics and self.show_calib_cb.isChecked():
+            # Trigger a redraw if session changed but box was left checked
+            self._toggle_calibration_view(True)
             
         sb = self.log_box.verticalScrollBar()
         sb.setValue(sb.maximum())
