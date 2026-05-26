@@ -4,7 +4,7 @@
     Modified by: Harry G. Driscoll
     Modified date: Dec 2025
 
-    Modfied for offline (no cloud data link) use
+    Modfied for offline (no cloud data link) use by Harry Driscoll
     
     This function calibrates the cameras, runs the pose detection algorithm, 
     reconstructs the 3D marker positions, augments the marker set,
@@ -50,41 +50,36 @@ def get_iphone_model_from_metadata(video_path):
     except Exception:
         return "iPhone"
 
-def smart_rotate_intrinsics(CamParams, videoPath):
+def smart_rotate_intrinsics(CamParams, videoPath, expected_orientation=None):
     """
-    Intelligently rotates intrinsics only if the aspect ratio mismatch 
-    between the video rotation and the intrinsic parameters suggests it is needed.
+    Intelligently rotates intrinsics. If expected_orientation is provided, it forces 
+    the orientation. Otherwise, it falls back to reading FFmpeg metadata.
     """
     try:
-        # 1. Get Video Rotation from Metadata
-        # 90 = Portrait (Standard iPhone), 0 = Landscape
-        rotation = getVideoRotation(videoPath)
-        
-        # 2. Get Intrinsic Dimensions
-        # imageSize is [rows, cols] (Height, Width)
-        # e.g., Portrait = [1920, 1080], Landscape = [1080, 1920]
+        # Get Intrinsic Dimensions (Height, Width)
         h_int, w_int = CamParams['imageSize'][0], CamParams['imageSize'][1]
-        
         is_intrinsics_portrait = h_int > w_int
         
-        # 3. Determine Video Orientation based on Rotation Tag
-        # If rotation is 90 or 270, the video content is displayed as Portrait
-        # If rotation is 0 or 180, the video content is displayed as Landscape
-        is_video_portrait = (rotation == 90 or rotation == 270)
-        
-        logging.info(f"SmartRotation: VideoRot={rotation} (Portrait={is_video_portrait}), Intrinsics={h_int}x{w_int} (Portrait={is_intrinsics_portrait})")
+        # 1. Check our forced manual override first
+        if expected_orientation == 'portrait':
+            is_video_portrait = True
+            logging.info(f"SmartRotation: Forcing PORTRAIT mode based on manual UI override.")
+        elif expected_orientation == 'landscape':
+            is_video_portrait = False
+            logging.info(f"SmartRotation: Forcing LANDSCAPE mode based on manual UI override.")
+        else:
+            # 2. Fallback to FFmpeg metadata reading
+            rotation = getVideoRotation(videoPath)
+            is_video_portrait = (rotation == 90 or rotation == 270)
+            logging.info(f"SmartRotation: Fallback to FFmpeg. VideoRot={rotation} (Portrait={is_video_portrait}), Intrinsics={h_int}x{w_int} (Portrait={is_intrinsics_portrait})")
 
-        # 4. Compare and Rotate if Mismatch
+        # 3. Compare and Rotate if Mismatch
         if is_video_portrait and not is_intrinsics_portrait:
             logging.info(">> Mismatch detected: Video is Portrait, Intrinsics are Landscape. ROTATING.")
             return legacyRotateIntrinsics(CamParams, videoPath)
             
         elif not is_video_portrait and is_intrinsics_portrait:
             logging.info(">> Mismatch detected: Video is Landscape, Intrinsics are Portrait. ROTATING.")
-            # We force the rotation by simulating a condition legacyRotateIntrinsics expects
-            # However, legacyRotateIntrinsics uses the video path to get rotation again.
-            # If video tag says 0 (Landscape), legacyRotateIntrinsics WILL swap dims.
-            # So calling it here is safe.
             return legacyRotateIntrinsics(CamParams, videoPath)
             
         else:
@@ -279,7 +274,11 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
 
                 # --- SMART ROTATION (PRIORITY 3) ---
                 try:
-                    CamParams = smart_rotate_intrinsics(CamParams, extrinsicPath)
+                    # Fetch explicit per-camera orientation if it exists, otherwise fallback to the global one
+                    orient_meta = sessionMetadata.get('cameraOrientations', {})
+                    expected_orient = orient_meta.get(camName, sessionMetadata.get('videoOrientation', None))
+                    
+                    CamParams = smart_rotate_intrinsics(CamParams, extrinsicPath, expected_orient)
                 except Exception as ffmpeg_err:
                     logging.warning(f"Smart Rotation failed: {ffmpeg_err}. Proceeding without rotation check.")
                 # -----------------------------------

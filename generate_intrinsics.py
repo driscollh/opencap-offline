@@ -33,12 +33,13 @@ def get_iphone_model(video_path):
     """Probes video metadata to identify the phone model."""
     try:
         cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', video_path]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
         data = json.loads(result.stdout)
         tags = data.get('format', {}).get('tags', {})
         model = tags.get('com.apple.quicktime.model') or tags.get('model')
         return model if model else "Unknown_iPhone"
-    except:
+    except Exception as e:
+        print(f"  [WARNING] Could not read metadata for {video_path}: {e}")
         return "Unknown_iPhone"
 
 def calibrate_camera(session_name, cam_name):

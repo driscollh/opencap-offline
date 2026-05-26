@@ -14,6 +14,8 @@ import argparse
 import traceback
 import generate_intrinsics
 
+from utilsTracking import generate_tracking_data, purge_excluded_subjects
+
 # --- DYNAMIC CONFIGURATION (Argparse for GUI Inputs) -----------------------
 def get_args():
     parser = argparse.ArgumentParser()
@@ -22,6 +24,7 @@ def get_args():
     parser.add_argument("--resolution", default="1x736")
     parser.add_argument("--trials", nargs='+', required=True)
     parser.add_argument("--step", default="all")
+    parser.add_argument("--exclusion_file", default=None)
     
     # --- DYNAMIC DLC CHECK ---
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -186,16 +189,40 @@ def load_custom_intrinsics(cam_folder, model_tag=None):
     with open(pickle_path, 'rb') as f: return pickle.load(f)
 
 def visualize_calibration(img, corners, rvec, tvec, intrinsics, save_path):
-    if corners is not None:
-        for c in corners: cv2.circle(img, (int(c[0,0]), int(c[0,1])), 3, (0, 0, 255), -1)
+    import os
+    import cv2
+    import numpy as np
+    
+    # 1. Immediately upscale the base image to 2x for high-res output
+    h, w = img.shape[:2]
+    img_2x = cv2.resize(img, (w * 2, h * 2), interpolation=cv2.INTER_CUBIC)
+    
+    # Create copies for the two outputs
+    img_detected = img_2x.copy()
+    img_reprojected = img_2x.copy()
 
+    # 2. Draw the rainbow grid lines directly on the 2x canvas
+    if corners is not None:
+        cv2.drawChessboardCorners(img_detected, BOARD_DIMS, corners * 2.0, True)
+
+    # 3. Calculate 3D reprojected points
     objp = np.zeros((BOARD_DIMS[0]*BOARD_DIMS[1], 3), np.float32)
     objp[:,:2] = np.mgrid[0:BOARD_DIMS[0], 0:BOARD_DIMS[1]].T.reshape(-1,2) * SQUARE_SIZE_MM
+    
     mtx, dist = intrinsics['intrinsicMat'], intrinsics['distortion']
     imgpts, _ = cv2.projectPoints(objp, rvec, tvec, mtx, dist)
-    for p in imgpts: cv2.circle(img, (int(p[0,0]), int(p[0,1])), 5, (255, 255, 0), 1)
     
-    cv2.imwrite(save_path, img)
+    # Draw solid yellow dots on the 2x canvas (multiply coords by 2!)
+    # We use a radius of 4 here so it looks like a clean 2px dot relative to the massive 2x canvas
+    for p in imgpts: 
+        cv2.circle(img_reprojected, (int(p[0,0] * 2), int(p[0,1] * 2)), 4, (0, 255, 255), -1)
+    
+    # 4. Save both high-res images to the CalibrationImages folder
+    cv2.imwrite(save_path, img_detected)
+    
+    base, ext = os.path.splitext(save_path)
+    reproj_path = f"{base}_reproj{ext}"
+    cv2.imwrite(reproj_path, img_reprojected)
 
 def run_auto_calibration(session_path):
     print(f"\n--- [Step 0/3] Auto-Calibration (Extrinsics) ---")
@@ -207,7 +234,6 @@ def run_auto_calibration(session_path):
         print(f"  > Calibrating {os.path.basename(cf)}...")
         input_dir = os.path.join(cf, 'InputMedia', CALIB_SOURCE_TRIAL)
         
-        # Look for existing sanitized MP4 first
         vpath = None
         for ext in ['.mp4', '.mov', '.avi']:
             cand = os.path.join(input_dir, f"{CALIB_SOURCE_TRIAL}{ext}")
@@ -220,69 +246,89 @@ def run_auto_calibration(session_path):
         if not intrinsics: continue
 
         cap = cv2.VideoCapture(vpath)
-        ret, frame = cap.read()
-        cap.release()
-        if not ret: continue
-
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        flags = cv2.CALIB_CB_EXHAUSTIVE | cv2.CALIB_CB_ACCURACY
-        ret, corners = cv2.findChessboardCornersSB(gray, BOARD_DIMS, flags=flags)
         
-        if not ret:
-            print("    [FAIL] Checkerboard NOT detected in first frame.")
+        found = False
+        corners = None
+        frame = None
+        max_frames_to_check = 60
+        frames_checked = 0
+        
+        while frames_checked < max_frames_to_check:
+            ret, frame_read = cap.read()
+            if not ret: break
+            
+            frame = frame_read.copy()
+            gray_1x = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            
+            sb_flags = cv2.CALIB_CB_EXHAUSTIVE | cv2.CALIB_CB_ACCURACY
+            ret_sb, corners_sb = cv2.findChessboardCornersSB(gray_1x, BOARD_DIMS, flags=sb_flags)
+            
+            if ret_sb:
+                corners = corners_sb 
+                found = True
+                print(f"    [SUCCESS] Checkerboard detected on frame {frames_checked} (SB).")
+                break
+                
+            upscaled = cv2.resize(frame, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+            gray_2x = cv2.cvtColor(upscaled, cv2.COLOR_BGR2GRAY)
+            
+            legacy_flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
+            ret_legacy, corners_legacy = cv2.findChessboardCorners(gray_2x, BOARD_DIMS, flags=legacy_flags)
+            
+            if ret_legacy:
+                corners = corners_legacy / 2.0
+                found = True
+                print(f"    [SUCCESS] Checkerboard detected on frame {frames_checked} (Legacy).")
+                break
+                
+            frames_checked += 1
+            
+        cap.release()
+
+        if not found:
+            print(f"    [FAIL] Checkerboard NOT detected.")
             continue
             
         objp = np.zeros((BOARD_DIMS[0]*BOARD_DIMS[1], 3), np.float32)
         objp[:,:2] = np.mgrid[0:BOARD_DIMS[0], 0:BOARD_DIMS[1]].T.reshape(-1,2) * SQUARE_SIZE_MM
-        
         mtx, dist = intrinsics['intrinsicMat'], intrinsics['distortion']
 
-        # =========================================================================
-        # --- NEW PLANAR AMBIGUITY SOLVER ---
-        # 1. Get BOTH valid mathematical solutions using IPPE
-        ret_pnp, rvecs, tvecs, reproj = cv2.solvePnPGeneric(objp, corners, mtx, dist, flags=cv2.SOLVEPNP_IPPE)
-        
-        rvec, tvec = rvecs[0], tvecs[0] # Default to the first solution
-        
-        # 2. Check metadata to see if the board is lying flat
-        placement = meta.get('checkerBoard', {}).get('placement', 'Vertical')
-        is_horizontal = placement in ['ground', 'Lying', 'Horizontal']
-        
-        if is_horizontal and len(rvecs) > 1:
-            # Calculate the camera's Z position in the real world (C = -R^T * t)
-            R0, _ = cv2.Rodrigues(rvecs[0])
-            C0 = -np.matrix(R0).T * np.matrix(tvecs[0])
+        # --- Helper function to solve and extract the Up Vector ---
+        def solve_pnp_robust(corners_array):
+            ret_pnp, rvecs, tvecs, reproj = cv2.solvePnPGeneric(objp, corners_array, mtx, dist, flags=cv2.SOLVEPNP_IPPE)
+            rv, tv = rvecs[0], tvecs[0]
             
-            R1, _ = cv2.Rodrigues(rvecs[1])
-            C1 = -np.matrix(R1).T * np.matrix(tvecs[1])
+            # Metadata check for IPPE Z-flip ambiguity
+            placement = meta.get('checkerBoard', {}).get('placement', 'Vertical')
+            is_horizontal = placement in ['ground', 'Lying', 'Horizontal']
             
-            # OpenCV Object Z points INTO the floor. 
-            # Therefore, a camera ABOVE the floor must have a NEGATIVE Z coordinate.
-            if C0[2] > 0 and C1[2] < 0:
-                print(f"    [AMBIGUITY FIXED] Camera was 'underground'. Swapped to Solution 2.")
-                rvec, tvec = rvecs[1], tvecs[1]
+            if is_horizontal and len(rvecs) > 1:
+                R0, _ = cv2.Rodrigues(rvecs[0])
+                C0 = -np.matrix(R0).T * np.matrix(tvecs[0])
+                R1, _ = cv2.Rodrigues(rvecs[1])
+                C1 = -np.matrix(R1).T * np.matrix(tvecs[1])
+                if C0[2] > 0 and C1[2] < 0:
+                    rv, tv = rvecs[1], tvecs[1]
 
-        # 3. Refine the chosen solution with standard Iterative polish
-        ret, rvec, tvec = cv2.solvePnP(
-            objp, corners, mtx, dist, 
-            rvec=rvec, tvec=tvec, 
-            useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE
-        )
-        # =========================================================================
+            cv2.solvePnP(objp, corners_array, mtx, dist, rvec=rv, tvec=tv, useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE)
+            R_mat, _ = cv2.Rodrigues(rv)
+            
+            # Extract the camera's physical Y-axis vector in world space
+            return rv, tv, R_mat, R_mat.T[:, 1]
+        
+        # 1. Initial Solve
+        rvec, tvec, R_matrix, cam_up = solve_pnp_robust(corners)
 
         visualize_calibration(frame.copy(), corners, rvec, tvec, intrinsics, os.path.join(calib_out, f'{os.path.basename(cf)}_calib.jpg'))
 
-        R_matrix, _ = cv2.Rodrigues(rvec)
         t_col = np.array(tvec).reshape(3, 1) 
-        
         img_size = np.array(intrinsics.get('imageSize', (frame.shape[1], frame.shape[0]))).reshape(2, 1)
-        euler = np.zeros((3,1)) 
-
+        
         with open(os.path.join(cf, 'cameraIntrinsicsExtrinsics.pickle'), 'wb') as f:
             pickle.dump({
                 'intrinsicMat': mtx, 'distortion': dist, 'imageSize': img_size,
                 'rotation': R_matrix, 'translation': t_col, 
-                'rotation_EulerAngles': euler, 'R': R_matrix, 't': t_col
+                'rotation_EulerAngles': np.zeros((3,1)), 'R': R_matrix, 't': t_col
             }, f)
         print(f"    [SUCCESS] Saved calibration.")
 
@@ -388,7 +434,8 @@ def run_openpose_direct(session_path, trial_name, pose_folder_name):
             '--display', '0', 
             '--render_pose', '1', 
             '--write_video', video_out_path,
-            '--num_gpu_start', str(OPENPOSE_GPU_START)
+            '--num_gpu_start', str(OPENPOSE_GPU_START),
+            '--number_people_max', '1'
         ]
 
         # Safely extract the resolution string by stripping the prefix
@@ -535,11 +582,31 @@ def run_offline_pipeline():
             generate_neutral_thumbnails(session_path, trial['name'], pose_folder_name)
             
             if step in ["all", "pose"]:
-                if args.pose_estimator == "openpose":
-                    run_openpose_direct(session_path, trial['name'], pose_folder_name)
-                else:
-                    run_rtmpose_direct(session_path, trial['name'], args.gpu_index, rtm_model_type, pose_folder_name)
+                # Only run the pose estimator if we are NOT resuming from an exclusion list
+                if not args.exclusion_file:
+                    if args.pose_estimator == "openpose":
+                        run_openpose_direct(session_path, trial['name'], pose_folder_name)
+                    else:
+                        run_rtmpose_direct(session_path, trial['name'], args.gpu_index, rtm_model_type, pose_folder_name)
                 
+                # --- NEW: TRACKING AND PURGING LOGIC ---
+                if args.exclusion_file and os.path.exists(args.exclusion_file):
+                    # We are resuming from the UI: Purge the excluded subjects
+                    purge_excluded_subjects(session_path, pose_folder_name, trial['name'], args.exclusion_file)
+                else:
+                    # Initial run: Generate tracking data and assess if an interrupt is required
+                    cam0_json_dir = os.path.join(session_path, 'Videos', 'Cam0', f'OutputJsons_{pose_folder_name}', trial['name'])
+                    cam0_vid_path = os.path.join(session_path, 'Videos', 'Cam0', 'InputMedia', trial['name'], f"{trial['name']}.mp4")
+                    tracking_json_path = os.path.join(session_path, "temp_tracking_data.json")
+                    
+                    print(f"    [SYSTEM] Executing spatial tracker to verify subject count...")
+                    multiple_subjects_found = generate_tracking_data(cam0_json_dir, cam0_vid_path, tracking_json_path)
+                    
+                    if multiple_subjects_found:
+                        print(f"    [INTERRUPT] Multiple subjects detected in {trial['name']}. Pausing for manual review.")
+                        sys.exit(5) # Triggers the SubjectSelectorDialog in the GUI
+                # ---------------------------------------
+
                 is_static_trial = (trial['type'] == 'static' or trial['name'].lower() == 'neutral')
                 generate_missing_pickles(session_path, trial['name'], pose_folder_name, 
                                         is_static=is_static_trial, 

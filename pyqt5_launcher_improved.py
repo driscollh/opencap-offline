@@ -798,25 +798,41 @@ class SubjectSelectorDialog(QDialog):
         
         layout.addLayout(ctrl_layout)
 
-        # 4. Checkboxes for Exclusion
+        # 4. Checkboxes for Exclusion (Scrollable Grid Layout)
         chk_frame = QFrame()
-        chk_layout = QHBoxLayout(chk_frame)
-        chk_layout.addWidget(QLabel("<b>Deselect to Exclude:</b>"))
+        chk_main_layout = QVBoxLayout(chk_frame)
+        chk_main_layout.addWidget(QLabel("<b>Deselect to Exclude:</b>"))
+        
+        # Constrain layout boundaries using a scroll viewport
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFixedHeight(120) 
+        
+        scroll_widget = QWidget()
+        scroll_layout = QGridLayout(scroll_widget)
         
         self.checkboxes = {}
-        for uid in sorted(list(unique_ids)):
-            # Default Checked = Keep
+        columns_per_row = 6 
+        
+        for idx, uid in enumerate(sorted(list(unique_ids))):
             chk = QCheckBox(f"Subject {uid}")
             chk.setChecked(True) 
             c = TRACK_COLORS[uid % len(TRACK_COLORS)]
             chk.setStyleSheet(f"color: rgb({c[0]},{c[1]},{c[2]}); font-weight: bold;")
-            chk_layout.addWidget(chk)
+            
+            # Map elements into grid rows and columns
+            row = idx // columns_per_row
+            col = idx % columns_per_row
+            scroll_layout.addWidget(chk, row, col)
             self.checkboxes[uid] = chk
             
+        scroll_area.setWidget(scroll_widget)
+        chk_main_layout.addWidget(scroll_area)
+            
         btn_confirm = QPushButton("Confirm Selection")
-        btn_confirm.setObjectName("AccentButton") # Uses launcher style
+        btn_confirm.setObjectName("AccentButton")
         btn_confirm.clicked.connect(self.confirm_selection)
-        chk_layout.addWidget(btn_confirm)
+        chk_main_layout.addWidget(btn_confirm)
         
         layout.addWidget(chk_frame)
 
@@ -882,8 +898,12 @@ class SubjectSelectorDialog(QDialog):
         qimg = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
         pix = QPixmap.fromImage(qimg)
         
+        # Reference parent window boundaries to prevent layout feedback loops
+        target_width = max(400, self.width() - 40)
+        target_height = max(300, self.height() - 320) # Reserve vertical space for timeline controls
+        
         self.video_label.setPixmap(pix.scaled(
-            self.video_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+            target_width, target_height, Qt.KeepAspectRatio, Qt.SmoothTransformation
         ))
 
     def confirm_selection(self):
@@ -900,6 +920,40 @@ class SubjectSelectorDialog(QDialog):
         if self.cap: self.cap.release()
         super().closeEvent(event)
 
+    def closeEvent(self, event):
+        if self.cap: self.cap.release()
+        super().closeEvent(event)
+
+    def _get_gpu_info(self) -> Dict[str, str]:
+        """
+        Query available GPUs using nvidia-smi.
+        
+        Returns:
+            Dictionary mapping GPU names to indices
+        """
+        try:
+            cmd = ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"]
+            result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+            gpu_names = result.decode().strip().split('\n')
+            gpu_map = {name.strip(): str(i) for i, name in enumerate(gpu_names)}
+            logger.info(f"Detected {len(gpu_map)} GPU(s)")
+            return gpu_map
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            logger.warning(f"GPU detection failed: {e}. Using CPU fallback.")
+            return {"CPU / Default": "0"}
+
+    def _update_res_options(self, estimator: str) -> None:
+        """
+        Updates resolution options or model complexity based on selected estimator.
+        """
+        self.res_combo.clear()
+        if estimator.lower() == "openpose":
+            self.res_combo.addItems(["1x368", "1x736", "1x736_2scales", "736x1 (Landscape)"])
+            self.res_combo.setEnabled(True)
+        else:
+            self.res_combo.addItems(["RTMPose-m (Fast/Balanced)", "RTMPose-l (High Accuracy)"])
+            self.res_combo.setEnabled(True)
+
 # =============================================================================
 # CUSTOM WIDGETS
 # =============================================================================
@@ -907,10 +961,10 @@ class SubjectSelectorDialog(QDialog):
 class VideoLoader(QThread):
     finished = Signal(list, str) 
     
-    def __init__(self, path, target_size=(480, 854)): # Portrait buffer resolution
+    def __init__(self, path, max_resolution=800): 
         super().__init__()
-        self.path = str(path) # Force string to prevent OpenCV path errors
-        self.target_size = target_size 
+        self.path = str(path) 
+        self.max_resolution = max_resolution 
         self.frames = []
         self._is_cancelled = False
         
@@ -927,20 +981,32 @@ class VideoLoader(QThread):
             self.finished.emit([], "error")
             return
             
+        # --- NEW: DYNAMIC ASPECT RATIO SCALING ---
+        # Read the actual native dimensions of the video
+        orig_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        orig_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        
+        if orig_w == 0 or orig_h == 0:
+            self.finished.emit([], "error")
+            return
+            
+        # Scale the video down to fit into RAM, but KEEP the native aspect ratio
+        scale = self.max_resolution / max(orig_w, orig_h)
+        target_size = (int(orig_w * scale), int(orig_h * scale))
+        # -----------------------------------------
+            
         while not self._is_cancelled: 
             ret, frame = cap.read()
             if not ret:
                 break
                 
-            resized = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
+            resized = cv2.resize(frame, target_size, interpolation=cv2.INTER_AREA)
             rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
             
             h, w, ch = rgb.shape
             bytes_per_line = ch * w
             qimg = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
             
-            # CRITICAL FIX: Append QImage.copy() NOT QPixmap! 
-            # QPixmap crashes if created outside the main GUI thread.
             self.frames.append(qimg.copy())
             
         cap.release()
@@ -1020,9 +1086,6 @@ class DualVideoPlayer(QWidget):
         self.raw_cache = []
         self.overlay_cache = []
         
-        # Hardcode a high-res buffer size so the background thread doesn't rely on UI geometry
-        buffer_size = (480, 854) 
-        
         self.play_button.setEnabled(False)
         self.slider.setEnabled(False)
         self.raw_label.clear()
@@ -1031,13 +1094,13 @@ class DualVideoPlayer(QWidget):
         self.status_lbl.show()
         
         if raw_path and os.path.exists(raw_path):
-            loader1 = VideoLoader(raw_path, buffer_size)
+            loader1 = VideoLoader(raw_path, max_resolution=800)
             loader1.finished.connect(self._on_raw_loaded)
             self.loaders.append(loader1)
             loader1.start()
             
         if overlay_path and os.path.exists(overlay_path):
-            loader2 = VideoLoader(overlay_path, buffer_size)
+            loader2 = VideoLoader(overlay_path, max_resolution=800)
             loader2.finished.connect(self._on_overlay_loaded)
             self.loaders.append(loader2)
             loader2.start()
@@ -1209,14 +1272,18 @@ class SkeletonViewer3D(QtInteractor):
             logger.error(f"TRC Load Error: {e}", exc_info=True)
 
     def toggle_calibration(self, session_path, show):
-        if not hasattr(self, 'calib_actors'):
+        # 1. Strict Name-Based Cleanup
+        # Gathers a static list of all calibration actors (including hidden point meshes) and purges them
+        keys_to_remove = [k for k in self.actors.keys() if str(k).startswith("calib_")]
+        for key in keys_to_remove:
+            self.remove_actor(key)
+        
+        # Ensure legacy array does not cause reference errors
+        if hasattr(self, 'calib_actors'):
+            self.calib_actors.clear()
+        else:
             self.calib_actors = []
-        
-        # Clear existing actors
-        for actor in self.calib_actors:
-            self.remove_actor(actor)
-        self.calib_actors.clear()
-        
+            
         if not show or not session_path:
             self.render()
             return
@@ -1238,43 +1305,91 @@ class SkeletonViewer3D(QtInteractor):
         width_m = (cols - 1) * size * 0.001
         height_m = (rows - 1) * size * 0.001
 
-        # =====================================================================
-        # --- NEW: Pure Yaw Rotation ---
-        # Rotates the entire camera/checkerboard assembly around the vertical axis 
-        # so it faces the front of the OpenSim skeleton (-90 or 90 degrees)
-        yaw_deg = -90 
-        theta = np.radians(yaw_deg)
-        c, s = np.cos(theta), np.sin(theta)
+        # --- SMART WORLD ORIENTATION ---
+        placement = meta.get('checkerBoard', {}).get('placement', 'Vertical')
+        is_horizontal = placement in ['ground', 'Lying', 'Horizontal']
+
+        if is_horizontal:
+            theta_x = np.radians(90)
+            cx, sx = np.cos(theta_x), np.sin(theta_x)
+            Rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+            
+            theta_y = np.radians(90)
+            cy, sy = np.cos(theta_y), np.sin(theta_y)
+            Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+            
+            R_world = Ry @ Rx
+        else:
+            yaw_deg = -90 
+            theta = np.radians(yaw_deg)
+            c, s = np.cos(theta), np.sin(theta)
+            R_world = np.array([
+                [ c, 0, s],
+                [ 0, 1, 0],
+                [-s, 0, c]
+            ])
+            
+        # 1. Transform and Draw Realistic Checkerboard
+        num_squares_x = cols + 1
+        num_squares_y = rows + 1
         
-        # Rotation Matrix around the Y-axis (Vertical in pre-swizzle space)
-        R_yaw = np.array([
-            [ c, 0, s],
-            [ 0, 1, 0],
-            [-s, 0, c]
-        ])
-        # =====================================================================
+        phys_width_m = num_squares_x * size * 0.001
+        phys_height_m = num_squares_y * size * 0.001
         
-        # 1. Transform and Draw Checkerboard 
-        raw_center = np.array([width_m / 2.0, height_m / 2.0, 0.0])
-        rot_center = R_yaw @ raw_center
+        center_x = width_m / 2.0
+        center_y = height_m / 2.0
+        
+        raw_center = np.array([center_x, center_y, 0.0])
+        rot_center = R_world @ raw_center
         center_swizzled = self._swizzle(rot_center)
         
-        raw_normal = np.array([0.0, 0.0, 1.0])
-        rot_normal = R_yaw @ raw_normal
-        normal_swizzled = self._swizzle(rot_normal)
-
-        board = pv.Plane(center=center_swizzled, direction=normal_swizzled, i_size=width_m, j_size=height_m)
-        b_actor = self.add_mesh(board, color="black", style="wireframe", line_width=2)
-        self.calib_actors.append(b_actor)
+        board_plane = pv.Plane(
+            center=(center_x, center_y, 0.0),
+            i_size=phys_width_m,
+            j_size=phys_height_m,
+            i_resolution=num_squares_x,
+            j_resolution=num_squares_y,
+            direction=(0, 0, 1)
+        )
+        
+        rotated_points = (R_world @ board_plane.points.T).T
+        board_plane.points = np.array([self._swizzle(p) for p in rotated_points])
+        
+        grid_x, grid_y = np.mgrid[0:num_squares_x, 0:num_squares_y]
+        checker_pattern = (grid_x + grid_y) % 2
+        board_plane.cell_data['Colors'] = checker_pattern.flatten(order='F')
+        
+        self.add_mesh(
+            board_plane, 
+            scalars='Colors', 
+            cmap=['white', 'black'], 
+            show_scalar_bar=False,
+            lighting=True,
+            name="calib_board"
+        )
         
         # 2. Transform and Draw Origin (First Corner)
         raw_origin = np.array([0.0, 0.0, 0.0])
-        rot_origin = R_yaw @ raw_origin
+        rot_origin = R_world @ raw_origin
         origin_pos = self._swizzle(rot_origin)
         
         origin_sphere = pv.Sphere(radius=0.02, center=origin_pos)
-        o_actor = self.add_mesh(origin_sphere, color="#6184D8")
-        self.calib_actors.append(o_actor)
+        self.add_mesh(origin_sphere, color="#6184D8", name="calib_origin")
+
+        # --- Draw Board Axes to Mimic Rainbow Grid Orientation ---
+        raw_x_end = np.array([width_m, 0.0, 0.0])
+        rot_x_end = R_world @ raw_x_end
+        x_end_pos = self._swizzle(rot_x_end)
+        
+        x_line = pv.Line(origin_pos, x_end_pos)
+        self.add_mesh(x_line, color="red", line_width=5, name="calib_x_axis")
+        
+        raw_y_end = np.array([0.0, height_m, 0.0])
+        rot_y_end = R_world @ raw_y_end
+        y_end_pos = self._swizzle(rot_y_end)
+        
+        y_line = pv.Line(origin_pos, y_end_pos)
+        self.add_mesh(y_line, color="blue", line_width=5, name="calib_y_axis")
         
         # 3. Transform and Draw Cameras
         cam_folders = sorted(glob.glob(os.path.join(session_path, "Videos", "Cam*")))
@@ -1287,29 +1402,32 @@ class SkeletonViewer3D(QtInteractor):
                 R = data['rotation']
                 t = data['translation']
                 
-                # Math: Camera Center = -R^T * t
                 C = -np.matrix(R).T @ np.matrix(t)
-                C_m = np.array(C).flatten() * 0.001 # Convert mm to meters
+                C_m = np.array(C).flatten() * 0.001 
                 
-                # Rotate the Camera Position
-                rot_C = R_yaw @ C_m
+                rot_C = R_world @ C_m
                 cam_pos = self._swizzle(rot_C)
                 
-                # Draw Camera as a Cone pointing at the board center
                 look_vec = np.array(center_swizzled) - np.array(cam_pos)
                 cone = pv.Cone(center=cam_pos, direction=look_vec, height=0.15, radius=0.08)
-                c_actor = self.add_mesh(cone, color="#E57373") # Pastel Red
-                self.calib_actors.append(c_actor)
                 
-                # Draw optical ray line
-                line = pv.Line(cam_pos, origin_pos)
-                l_actor = self.add_mesh(line, color="#E57373", line_width=1, opacity=0.5)
-                self.calib_actors.append(l_actor)
-                
-                # Draw Label
                 cam_name = os.path.basename(cf)
-                lbl_actor = self.add_point_labels([cam_pos], [cam_name], point_size=0, font_size=14, text_color="white", name=f"lbl_{cam_name}", shape_opacity=0.3)
-                self.calib_actors.append(lbl_actor)
+                
+                self.add_mesh(cone, color="#E57373", name=f"calib_cam_cone_{cam_name}")
+                
+                line = pv.Line(cam_pos, origin_pos)
+                self.add_mesh(line, color="#E57373", line_width=1, opacity=0.5, name=f"calib_cam_ray_{cam_name}")
+                
+                self.add_point_labels(
+                    [cam_pos], 
+                    [cam_name], 
+                    point_size=0, 
+                    font_size=14, 
+                    text_color="white", 
+                    shape_opacity=0.3,
+                    always_visible=True,
+                    name=f"calib_cam_lbl_{cam_name}"
+                )
                 
         self.reset_camera()
         self.render()
@@ -1632,7 +1750,7 @@ class CreateSessionDialog(QDialog):
         self.placement_combo.addItems(["Vertical (Wall)", "Horizontal (Ground)"])
         
         self.orientation_combo = QComboBox()
-        self.orientation_combo.addItems(["Portrait (Default)", "Landscape"])
+        self.orientation_combo.addItems(["Portrait (Default)", "Landscape", "Mixed"])
         self.orientation_combo.setToolTip("Portrait: Phone held vertically.\nLandscape: Phone held horizontally.")
         
         form.addRow("Session Name:*", self.name_edit)
@@ -1819,21 +1937,38 @@ class CreateSessionDialog(QDialog):
                 # If user cancelled, revert to a default like 'healthy'
                 self.tag_combo.setCurrentIndex(0)
 
-class MixedCameraDialog(QDialog):
-    """Dialogue to assign device types to individual cameras."""
-    def __init__(self, parent, num_cameras):
+class PerCameraConfigDialog(QDialog):
+    """Dialogue to assign device types and orientations to individual cameras."""
+    def __init__(self, parent, num_cameras, default_type, default_orient):
         super().__init__(parent)
-        self.setWindowTitle("Mixed Camera Setup")
+        self.setWindowTitle("Per-Camera Configuration")
         layout = QVBoxLayout(self)
-        self.combos = {}
+        self.configs = {}
 
         form = QFormLayout()
         for i in range(num_cameras):
-            combo = QComboBox()
-            combo.addItems(["iPhone", "Android", "Other"])
             cam_name = f"Cam{i}"
-            form.addRow(f"{cam_name} Device:", combo)
-            self.combos[cam_name] = combo
+            
+            # Device Type Dropdown
+            type_cb = QComboBox()
+            type_cb.addItems(["iPhone", "Android", "Other"])
+            if default_type in ["iPhone", "Android", "Other"]:
+                type_cb.setCurrentText(default_type)
+                
+            # Orientation Dropdown
+            orient_cb = QComboBox()
+            orient_cb.addItems(["Portrait", "Landscape"])
+            if "Landscape" in default_orient:
+                orient_cb.setCurrentText("Landscape")
+            elif "Portrait" in default_orient:
+                orient_cb.setCurrentText("Portrait")
+                
+            row_layout = QHBoxLayout()
+            row_layout.addWidget(type_cb)
+            row_layout.addWidget(orient_cb)
+            
+            form.addRow(f"{cam_name}:", row_layout)
+            self.configs[cam_name] = {'type': type_cb, 'orient': orient_cb}
         
         layout.addLayout(form)
         
@@ -1842,13 +1977,17 @@ class MixedCameraDialog(QDialog):
         layout.addWidget(btn)
 
     def get_config(self):
-        # Maps user-friendly names to the internal strings main.py expects
-        mapping = {
-            "iPhone": "iPhone_Auto_Detect",
-            "Android": "Android_Generic",
-            "Other": "Generic_Webcam"
-        }
-        return {cam: mapping[cb.currentText()] for cam, cb in self.combos.items()}
+        # Maps user-friendly names to the internal strings
+        type_mapping = {"iPhone": "iPhone_Auto_Detect", "Android": "Android_Generic", "Other": "Generic_Webcam"}
+        orient_mapping = {"Portrait": "portrait", "Landscape": "landscape"}
+        
+        final_config = {}
+        for cam, widgets in self.configs.items():
+            final_config[cam] = {
+                'model': type_mapping[widgets['type'].currentText()],
+                'orientation': orient_mapping[widgets['orient'].currentText()]
+            }
+        return final_config
 
 # =============================================================================
 # MAIN WINDOW
@@ -3066,7 +3205,7 @@ class OpenCapPro(QMainWindow):
 
         self._start_pipeline_process(session, config, step=step)
 
-    def _start_pipeline_process(self, session, config, step="all"): # Add step parameter
+    def _start_pipeline_process(self, session, config, step="all", resume_file=None):
         self.process = QProcess()
         self.process.setProcessChannelMode(QProcess.MergedChannels)
         self.process.readyReadStandardOutput.connect(self._handle_stdout)
@@ -3082,11 +3221,15 @@ class OpenCapPro(QMainWindow):
             "--trials"
         ] + config["trials"]
         
+        # --- NEW: Append the exclusion file flag if resuming ---
+        if resume_file:
+            script_args.extend(["--exclusion_file", resume_file])
+            
         self.log_box.clear()
         self.log_box.append(f">>> Executing {config.get('pose_estimator').upper()}: {' '.join(script_args)}")
         
         self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0) # Pulsing busy mode
+        self.progress_bar.setRange(0, 0)
         self.progress_label.setText("Processing with stable backend...")
         
         self.process.start(sys.executable, script_args)
@@ -3169,24 +3312,35 @@ class OpenCapPro(QMainWindow):
             placement_map = {"Vertical (Wall)": "Perpendicular", "Horizontal (Ground)": "Lying"}
             mapped_placement = placement_map.get(data['placement'], "Perpendicular")
             
-            # --- UPDATED MAPPING LOGIC ---
+            # --- PER-CAMERA MAPPING LOGIC ---
             num_cams = int(data['cams'])
-            if data['cam_type'] == "Mixed":
-                mixed_dlg = MixedCameraDialog(self, num_cams)
-                if mixed_dlg.exec_() == QDialog.Accepted:
-                    cam_model_map = mixed_dlg.get_config()
+            cam_model_map = {}
+            cam_orient_map = {}
+            
+            # If they chose Mixed for either setting, open the advanced dialog
+            if data['cam_type'] == "Mixed" or data['orientation'] == "Mixed":
+                config_dlg = PerCameraConfigDialog(self, num_cams, data['cam_type'], data['orientation'])
+                if config_dlg.exec_() == QDialog.Accepted:
+                    configs = config_dlg.get_config()
+                    cam_model_map = {cam: conf['model'] for cam, conf in configs.items()}
+                    cam_orient_map = {cam: conf['orientation'] for cam, conf in configs.items()}
                 else:
-                    return 
+                    return # User cancelled
             else:
+                # Standard unified setup
                 base_model = "Generic_Webcam"
                 if data['cam_type'] == "iPhone":
                     base_model = "iPhone_Auto_Detect"
                 elif data['cam_type'] == "Android":
                     base_model = "Android_Generic"
-                
                 cam_model_map = {f"Cam{i}": base_model for i in range(num_cams)}
 
-            orientation_val = "landscape" if "Landscape" in data['orientation'] else "portrait"
+                base_orient = "landscape" if "Landscape" in data['orientation'] else "portrait"
+                cam_orient_map = {f"Cam{i}": base_orient for i in range(num_cams)}
+            
+            # Use 'mixed' for the legacy key so we don't break old OpenCap scripts, 
+            # and store our new explicit map in 'cameraOrientations'
+            orientation_val = "mixed" if data['orientation'] == "Mixed" else ("landscape" if "Landscape" in data['orientation'] else "portrait")
 
             metadata = {
                 "augmentermodel": "v0.3",
@@ -3198,6 +3352,7 @@ class OpenCapPro(QMainWindow):
                     "squareSideLength_mm": float(data['size'])
                 },
                 "videoOrientation": orientation_val,
+                "cameraOrientations": cam_orient_map,
                 "filterfrequency": "default",
                 "gender_mf": data['gender'],
                 "height_m": float(data['height']),
