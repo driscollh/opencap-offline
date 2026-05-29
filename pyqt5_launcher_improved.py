@@ -153,6 +153,337 @@ class Colors:
     LIGHT_INPUT = "#ffffff"
     LIGHT_DISABLED = "#f0f0f0"  # <--- NEW: Light Grey for disabled inputs
 
+class Lang:
+    """Centralized dictionary for Korean/English localization."""
+    CURRENT = 'EN'
+    
+    STRINGS = {
+        'EN': {
+            # Main UI
+            'new_session': '+ New Session',
+            'refresh_list': 'Refresh List',
+            'edit_meta': 'Edit Metadata',
+            'view_menu': '&View',
+            'lang_toggle': '한국어로 변경 (Switch to Korean)',
+            'theme_toggle': '&Toggle Dark/Light Mode',
+            'select_gpu': 'Select GPU:',
+            'pose_estimator': 'Pose Estimator:',
+            'resolution': 'Resolution:',
+            'run_pipeline': 'RUN PIPELINE',
+            'cancel': 'Cancel',
+            'cancel_process': 'Cancel Processing',
+            'idle': 'Idle',
+            'select_trials': 'Select Trials to Process:',
+            'play': 'Play',
+            'pause': 'Pause',
+            'confirm': 'Confirm Selection',
+            'step_1': '1. Process Intrinsics',
+            'step_2_full': '2. Run Full Pipeline',
+            'step_2_ext': '2. Calibrate Extrinsics',
+            'step_3': '3. 2D Pose Estimation',
+            'step_4': '4. 3D Pose and OpenSim',
+            'acknowledge_close': 'Acknowledge & Close',
+            'confirm_assign': 'Confirm Assignments',
+            'import_trial_down': '▼ IMPORT TRIAL',
+            'import_trial_right': '▶ IMPORT TRIAL',
+            'execute_import': 'EXECUTE IMPORT',
+            'pipeline_exec_down': '▼ PIPELINE EXECUTION',
+            'pipeline_exec_right': '▶ PIPELINE EXECUTION',
+            'research_mode': 'Research Mode (Granular Controls)',
+            'show_calib': 'Show Calibration Setup',
+            'browse': 'Browse',
+            'clear': 'Clear',
+            
+            # Dialogs & Forms
+            'create_new_session': 'Create New Session',
+            'session_name': 'Session Name:*',
+            'subject_id': 'Subject ID:*',
+            'gender': 'Gender:*',
+            'height': 'Height (m):*',
+            'weight': 'Weight (kg):*',
+            'tag': 'Tag:',
+            'cam_calib_settings': 'Camera & Calibration Settings',
+            'cam_type': 'Camera Type:',
+            'cam_orientation': 'Camera Orientation:',
+            'cam_nums': 'Camera Nums:',
+            'board_placement': 'Board Placement:',
+            'rows': 'Rows:',
+            'cols': 'Cols:',
+            'square_size': 'Square Size (mm):',
+            'create': 'Create',
+            'reset_defaults': 'Reset to Defaults',
+            'save_metadata': 'Save Metadata',
+            
+            # Popups & Context Menus
+            'warning': 'Warning',
+            'error': 'Error',
+            'success': 'Success',
+            'confirm_cancel': 'Confirm Cancel',
+            'cancel_prompt': 'Are you sure you want to abort the current process? Partial data may be corrupted.',
+            'perf_warning': 'Performance Warning',
+            'perf_prompt': 'Processing with OpenPose at 1x736 is highly memory-intensive.\n\nIf the video contains vertical background clutter (tables, chair legs), the algorithm may experience combinatorial explosion, massively increasing processing time.\n\nDo you wish to proceed?',
+            'proc_complete': 'Processing Complete!',
+            'confirm_delete': 'Confirm Delete',
+            'delete_prompt': 'Are you sure you want to permanently delete this file?',
+            'rename_file': 'Rename File',
+            'delete_file': 'Delete File',
+
+            # Dialog Titles
+            'adv_meta_editor': 'Advanced Metadata Editor',
+            'review_subjects': 'Review Detected Subjects',
+            'calib_review': 'Extrinsics Calibration Review',
+            'pipeline_config': 'Pipeline Configuration',
+            'per_cam_config': 'Per-Camera Configuration',
+            
+            # Tooltips & Placeholders
+            'nested_json_tip': 'Nested data (JSON format)',
+            'reset_meta_tip': 'Revert all fields to the original session creation values.',
+            'dlc_unlocked': 'Blackwell DLC detected: RTMPose Unlocked.',
+            'dlc_missing': 'DLC missing: RTMPose is disabled for this installation.',
+            'gpu_tip': 'Choose GPU for processing (requires CUDA)',
+            'pose_tip': 'Select the AI model for pose estimation',
+            'res_tip': 'Select processing resolution preset',
+            'cancel_pipe_tip': 'Cancel pipeline execution',
+            'run_pipe_tip': 'Start processing selected trials',
+            'process_trial_tip': 'Process trial:',
+            'eg_session': 'e.g., Session_2024_01',
+            'session_id_tip': 'Unique identifier for this session',
+            'eg_subject': 'e.g., Subject_001',
+            'subject_id_tip': 'Subject identifier for this capture session',
+            'height_tip': 'Subject height in meters',
+            'weight_tip': 'Subject weight in kilograms',
+            'orient_tip': 'Portrait: Phone held vertically.\nLandscape: Phone held horizontally.',
+            'cam_type_tip': 'Select the type of camera device being used',
+            'placement_tip': 'Vertical: Board matches gravity (standard).\nHorizontal: Board is flat on ground (good for 360° setups).',
+            'log_placeholder': 'Process output will appear here...',
+            'trial_name_placeholder': 'Trial Name',
+            'trial_name_tip': 'Custom name for dynamic trials.\nExamples: walking_1, running_fast, jump_test',
+            
+            # UI Labels
+            'deselect_exclude': '<b>Deselect to Exclude:</b>',
+            'raw_video': 'Raw Video',
+            'overlay': 'Overlay',
+            'no_video': 'No Video',
+            'buffering': 'Buffering videos to RAM...',
+            'error_loading_raw': 'Error loading raw video.',
+            'no_calib_images': 'No calibration images found. The detection may have failed on the first frame.',
+            'no_trials_avail': 'No trials available for processing',
+            'req_fields': '* Required fields',
+            'trial_type_label': 'TRIAL TYPE:',
+            'ready': 'Ready',
+            'no_files_sel': 'No files selected',
+            'calibrating_btn': 'CALIBRATING...',
+            'proc_stable_backend': 'Processing with stable backend...',
+            'aborted_user': 'Process aborted by user.',
+            
+            # Menus
+            'file_menu': '&File',
+            'new_session_menu': '&New Session...',
+            'refresh_menu': '&Refresh Sessions',
+            'recent_menu': 'Recent Sessions',
+            'quit_menu': '&Quit',
+            'help_menu': '&Help',
+            'about_menu': '&About',
+            
+            # Prompts & Message Boxes
+            'confirm_reset': 'Confirm Reset',
+            'confirm_reset_prompt': 'Are you sure you want to discard all changes and return to the original session values?',
+            'format_error': 'Formatting Error',
+            'vid_not_found': 'Error: Video not found\n',
+            'data_missing': 'Data Missing',
+            'val_error': 'Validation Error',
+            'custom_tag_title': 'Custom Subject Tag',
+            'custom_tag_prompt': 'Enter specific subject condition/tag:',
+            'input_error': 'Input Error',
+            'input_error_prompt': 'Ensure session is selected, trial is named, and files are browsed.',
+            'folder_exists': 'Folder Already Exists',
+            'calib_intrinsics': 'Calibrate Intrinsics',
+            'sel_cam_calib': 'Select Camera to Calibrate:',
+            'calib_done': 'Calibration Done',
+            'calib_failed': 'Calibration Failed',
+            'no_pose_data': 'No Pose Data',
+            'no_pose_data_prompt': 'No processed pose data found in this session.\n\nPlease run \'3. Run Pose\' first.',
+            'track_data_missing': 'Pipeline requested review but tracking data is missing.',
+            'vid_missing': 'Video Missing',
+            'session_exists': 'Session Exists',
+            'creation_failed': 'Creation Failed',
+            'about_title': 'About OpenCap Offline',
+            'update_avail': 'Update Available',
+            'up_to_date': 'Up to Date',
+            'api_error': 'Could not check for updates. The GitHub API might be rate-limiting.',
+            'conn_error': 'Could not connect to GitHub. Please check your internet connection.',
+            'rename_title': 'Rename File',
+            'rename_prompt': 'Enter new file name (including extension):',
+            'file_exists': 'A file with that name already exists in this folder.',
+            'process_running': 'Process Running',
+            'process_running_prompt': 'A pipeline process is still running.\n\nQuit anyway? The process will be terminated.',
+        },
+        'KO': {
+            # Main UI
+            'new_session': '+ 새 세션',
+            'refresh_list': '목록 새로고침',
+            'edit_meta': '메타데이터 편집',
+            'view_menu': '&보기',
+            'lang_toggle': 'Switch to English',
+            'theme_toggle': '&다크/라이트 모드 전환',
+            'select_gpu': 'GPU 선택:',
+            'pose_estimator': '포즈 추정기:',
+            'resolution': '해상도:',
+            'run_pipeline': '파이프라인 실행',
+            'cancel': '취소',
+            'cancel_process': '처리 취소',
+            'idle': '대기 중',
+            'select_trials': '처리할 테스트 선택:',
+            'play': '재생',
+            'pause': '일시정지',
+            'confirm': '선택 확인',
+            'step_1': '1. 내부 파라미터 처리',
+            'step_2_full': '2. 전체 파이프라인 실행',
+            'step_2_ext': '2. 외부 파라미터 캘리브레이션',
+            'step_3': '3. 2D 포즈 추정',
+            'step_4': '4. 3D 포즈 및 OpenSim',
+            'acknowledge_close': '확인 및 닫기',
+            'confirm_assign': '할당 확인',
+            'import_trial_down': '▼ 테스트 가져오기',
+            'import_trial_right': '▶ 테스트 가져오기',
+            'execute_import': '가져오기 실행',
+            'pipeline_exec_down': '▼ 파이프라인 실행',
+            'pipeline_exec_right': '▶ 파이프라인 실행',
+            'research_mode': '연구 모드 (세부 제어)',
+            'show_calib': '캘리브레이션 설정 보기',
+            'browse': '찾아보기',
+            'clear': '지우기',
+            
+            # Dialogs & Forms
+            'create_new_session': '새 세션 생성',
+            'session_name': '세션 이름:*',
+            'subject_id': '피험자 ID:*',
+            'gender': '성별:*',
+            'height': '키 (m):*',
+            'weight': '몸무게 (kg):*',
+            'tag': '태그:',
+            'cam_calib_settings': '카메라 및 캘리브레이션 설정',
+            'cam_type': '카메라 종류:',
+            'cam_orientation': '카메라 방향:',
+            'cam_nums': '카메라 수:',
+            'board_placement': '보드 배치:',
+            'rows': '행(Rows):',
+            'cols': '열(Cols):',
+            'square_size': '사각형 크기 (mm):',
+            'create': '생성',
+            'reset_defaults': '기본값으로 재설정',
+            'save_metadata': '메타데이터 저장',
+            
+            # Popups & Context Menus
+            'warning': '경고',
+            'error': '오류',
+            'success': '성공',
+            'confirm_cancel': '취소 확인',
+            'cancel_prompt': '현재 프로세스를 중단하시겠습니까? 일부 데이터가 손상될 수 있습니다.',
+            'perf_warning': '성능 경고',
+            'perf_prompt': '1x736 해상도에서 OpenPose로 처리하는 것은 메모리 소모가 매우 큽니다.\n\n비디오에 수직 배경물(테이블, 의자 다리 등)이 많을 경우 처리 시간이 기하급수적으로 늘어날 수 있습니다.\n\n계속하시겠습니까?',
+            'proc_complete': '처리 완료!',
+            'confirm_delete': '삭제 확인',
+            'delete_prompt': '이 파일을 영구적으로 삭제하시겠습니까?',
+            'rename_file': '파일 이름 변경',
+            'delete_file': '파일 삭제',
+
+            # Dialog Titles
+            'adv_meta_editor': '고급 메타데이터 편집기',
+            'review_subjects': '감지된 피험자 검토',
+            'calib_review': '외부 파라미터 캘리브레이션 검토',
+            'pipeline_config': '파이프라인 구성',
+            'per_cam_config': '카메라별 구성',
+            
+            # Tooltips & Placeholders
+            'nested_json_tip': '중첩된 데이터 (JSON 형식)',
+            'reset_meta_tip': '모든 필드를 초기 세션 생성 값으로 되돌립니다.',
+            'dlc_unlocked': 'Blackwell DLC 감지됨: RTMPose 잠금 해제.',
+            'dlc_missing': 'DLC 누락: 이 설치에서는 RTMPose가 비활성화되었습니다.',
+            'gpu_tip': '처리할 GPU 선택 (CUDA 필요)',
+            'pose_tip': '포즈 추정을 위한 AI 모델 선택',
+            'res_tip': '처리 해상도 사전 설정 선택',
+            'cancel_pipe_tip': '파이프라인 실행 취소',
+            'run_pipe_tip': '선택한 테스트 처리 시작',
+            'process_trial_tip': '테스트 처리:',
+            'eg_session': '예: Session_2024_01',
+            'session_id_tip': '이 세션의 고유 식별자',
+            'eg_subject': '예: Subject_001',
+            'subject_id_tip': '이 캡처 세션의 피험자 식별자',
+            'height_tip': '피험자 키 (미터)',
+            'weight_tip': '피험자 몸무게 (킬로그램)',
+            'orient_tip': 'Portrait: 휴대폰을 세로로 듭니다.\nLandscape: 휴대폰을 가로로 듭니다.',
+            'cam_type_tip': '사용 중인 카메라 장치 유형 선택',
+            'placement_tip': 'Vertical: 보드가 중력과 일치합니다(표준).\nHorizontal: 보드가 바닥에 평평합니다(360° 설정에 적합).',
+            'log_placeholder': '처리 출력이 여기에 표시됩니다...',
+            'trial_name_placeholder': '테스트 이름',
+            'trial_name_tip': '동적 테스트를 위한 사용자 지정 이름.\n예: walking_1, running_fast, jump_test',
+            
+            # UI Labels
+            'deselect_exclude': '<b>제외할 항목 선택 취소:</b>',
+            'raw_video': '원본 비디오',
+            'overlay': '오버레이',
+            'no_video': '비디오 없음',
+            'buffering': 'RAM에 비디오 버퍼링 중...',
+            'error_loading_raw': '원본 비디오 로드 오류.',
+            'no_calib_images': '캘리브레이션 이미지를 찾을 수 없습니다. 첫 프레임에서 감지에 실패했을 수 있습니다.',
+            'no_trials_avail': '처리할 수 있는 테스트가 없습니다.',
+            'req_fields': '* 필수 입력란',
+            'trial_type_label': '테스트 유형:',
+            'ready': '준비 완료',
+            'no_files_sel': '선택된 파일 없음',
+            'calibrating_btn': '캘리브레이션 중...',
+            'proc_stable_backend': '안정적인 백엔드로 처리 중...',
+            'aborted_user': '사용자가 프로세스를 중단했습니다.',
+            
+            # Menus
+            'file_menu': '&파일',
+            'new_session_menu': '&새 세션...',
+            'refresh_menu': '&세션 새로고침',
+            'recent_menu': '최근 세션',
+            'quit_menu': '&종료',
+            'help_menu': '&도움말',
+            'about_menu': '&정보',
+            
+            # Prompts & Message Boxes
+            'confirm_reset': '초기화 확인',
+            'confirm_reset_prompt': '모든 변경 사항을 취소하고 원래 세션 값으로 돌아가시겠습니까?',
+            'format_error': '형식 오류',
+            'vid_not_found': '오류: 비디오를 찾을 수 없음\n',
+            'data_missing': '데이터 누락',
+            'val_error': '유효성 검사 오류',
+            'custom_tag_title': '사용자 지정 피험자 태그',
+            'custom_tag_prompt': '특정 피험자 조건/태그 입력:',
+            'input_error': '입력 오류',
+            'input_error_prompt': '세션이 선택되었는지, 테스트 이름이 지정되었는지, 파일을 찾아보았는지 확인하세요.',
+            'folder_exists': '폴더가 이미 존재함',
+            'calib_intrinsics': '내부 파라미터 캘리브레이션',
+            'sel_cam_calib': '캘리브레이션할 카메라 선택:',
+            'calib_done': '캘리브레이션 완료',
+            'calib_failed': '캘리브레이션 실패',
+            'no_pose_data': '포즈 데이터 없음',
+            'no_pose_data_prompt': '이 세션에서 처리된 포즈 데이터를 찾을 수 없습니다.\n\n먼저 \'3. 2D 포즈 추정\'을 실행하세요.',
+            'track_data_missing': '파이프라인이 검토를 요청했지만 추적 데이터가 누락되었습니다.',
+            'vid_missing': '비디오 누락',
+            'session_exists': '세션 존재',
+            'creation_failed': '생성 실패',
+            'about_title': 'OpenCap Offline 정보',
+            'update_avail': '업데이트 가능',
+            'up_to_date': '최신 버전',
+            'api_error': '업데이트를 확인할 수 없습니다. GitHub API 요청 제한일 수 있습니다.',
+            'conn_error': 'GitHub에 연결할 수 없습니다. 인터넷 연결을 확인하세요.',
+            'rename_title': '파일 이름 변경',
+            'rename_prompt': '새 파일 이름 입력 (확장자 포함):',
+            'file_exists': '해당 이름의 파일이 이 폴더에 이미 존재합니다.',
+            'process_running': '프로세스 실행 중',
+            'process_running_prompt': '파이프라인 프로세스가 아직 실행 중입니다.\n\n그래도 종료하시겠습니까? 프로세스가 종료됩니다.',
+        }
+    }
+
+    @classmethod
+    def get(cls, key):
+        return cls.STRINGS[cls.CURRENT].get(key, key)
+
 # Trial Types
 class TrialType(Enum):
     """Enumeration of trial types"""
@@ -469,7 +800,7 @@ class MetadataEditorDialog(QDialog):
     """Popup to edit ALL metadata with a safety reset to the session's initial state."""
     def __init__(self, parent, session_path):
         super().__init__(parent)
-        self.setWindowTitle("Advanced Metadata Editor")
+        self.setWindowTitle(Lang.get('adv_meta_editor'))
         self.resize(600, 750)
         self.session_path = Path(session_path)
         self.metadata_file = self.session_path / "sessionMetadata.yaml"
@@ -503,16 +834,15 @@ class MetadataEditorDialog(QDialog):
         btn_layout = QHBoxLayout()
         
         # RESET BUTTON
-        btn_reset = QPushButton("Reset to Defaults")
-        btn_reset.setToolTip("Revert all fields to the original session creation values.")
+        btn_reset = QPushButton(Lang.get('reset_defaults'))
+        btn_reset.setToolTip(Lang.get('reset_meta_tip'))
         btn_reset.clicked.connect(self.reset_to_original)
         
-        # SAVE & CANCEL
-        btn_save = QPushButton("Save Metadata")
+        btn_save = QPushButton(Lang.get('save_metadata'))
         btn_save.setObjectName("AccentButton")
         btn_save.clicked.connect(self.save_metadata)
         
-        btn_cancel = QPushButton("Cancel")
+        btn_cancel = QPushButton(Lang.get('cancel'))
         btn_cancel.clicked.connect(self.reject)
         
         btn_layout.addWidget(btn_reset)
@@ -533,7 +863,7 @@ class MetadataEditorDialog(QDialog):
         for key, value in self.current_data.items():
             if isinstance(value, dict):
                 edit = QLineEdit(json.dumps(value))
-                edit.setToolTip("Nested data (JSON format)")
+                edit.setToolTip(Lang.get('nested_json_tip'))
             else:
                 edit = QLineEdit(str(value))
             
@@ -543,8 +873,8 @@ class MetadataEditorDialog(QDialog):
     def reset_to_original(self):
         """Restores the UI fields to the snapshot taken when the dialog opened."""
         reply = QMessageBox.question(
-            self, "Confirm Reset", 
-            "Are you sure you want to discard all changes and return to the original session values?",
+            self, Lang.get('confirm_reset'), 
+            Lang.get('confirm_reset_prompt'),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
         
@@ -572,7 +902,7 @@ class MetadataEditorDialog(QDialog):
                 else:
                     updated_dict[key] = text
             except Exception as e:
-                QMessageBox.critical(self, "Formatting Error", f"Invalid input for {key}: {e}")
+                QMessageBox.critical(self, Lang.get('format_error'), f"Invalid input for {key}: {e}")
                 return
 
         with open(self.metadata_file, 'w') as f:
@@ -705,7 +1035,7 @@ class SubjectSelectorDialog(QDialog):
     """Popup Window for reviewing and excluding subjects."""
     def __init__(self, parent, video_path, tracking_file):
         super().__init__(parent)
-        self.setWindowTitle("Review Detected Subjects")
+        self.setWindowTitle(Lang.get('review_subjects'))
         self.resize(1000, 700)
         
         self.video_path = video_path
@@ -730,14 +1060,14 @@ class SubjectSelectorDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # GPU Selection
-        layout.addWidget(QLabel("Select GPU:"))
+        layout.addWidget(QLabel(Lang.get('select_gpu')))
         self.gpu_combo = QComboBox()
         self.gpu_map = self._get_gpu_info()
         self.gpu_combo.addItems(list(self.gpu_map.keys()))
         layout.addWidget(self.gpu_combo)
 
         # --- DYNAMIC DLC CHECK FOR POSE ESTIMATOR ---
-        layout.addWidget(QLabel("Pose Estimator:"))
+        layout.addWidget(QLabel(Lang.get('pose_estimator')))
         self.pose_combo = QComboBox()
         
         # Identify the DLC path relative to the launcher
@@ -748,16 +1078,16 @@ class SubjectSelectorDialog(QDialog):
         pose_choices = ["OpenPose"]
         if os.path.exists(dlc_path):
             pose_choices.append("RTMPose")
-            self.pose_combo.setToolTip("Blackwell DLC detected: RTMPose Unlocked.")
+            self.pose_combo.setToolTip(Lang.get('dlc_unlocked'))
         else:
-            self.pose_combo.setToolTip("DLC missing: RTMPose is disabled for this installation.")
+            self.pose_combo.setToolTip(Lang.get('dlc_missing'))
 
         self.pose_combo.addItems(pose_choices)
         layout.addWidget(self.pose_combo)
         # --------------------------------------------
         
         # Resolution Selection
-        layout.addWidget(QLabel("Resolution:"))
+        layout.addWidget(QLabel(Lang.get('resolution')))
         self.res_combo = QComboBox()
         layout.addWidget(self.res_combo)
 
@@ -787,7 +1117,7 @@ class SubjectSelectorDialog(QDialog):
         # 3. Controls (Play/Pause + Checkboxes)
         ctrl_layout = QHBoxLayout()
         
-        self.btn_play = QPushButton("Play")
+        self.btn_play = QPushButton(Lang.get('play'))
         self.btn_play.clicked.connect(self.toggle_play)
         ctrl_layout.addWidget(self.btn_play)
         
@@ -801,7 +1131,7 @@ class SubjectSelectorDialog(QDialog):
         # 4. Checkboxes for Exclusion (Scrollable Grid Layout)
         chk_frame = QFrame()
         chk_main_layout = QVBoxLayout(chk_frame)
-        chk_main_layout.addWidget(QLabel("<b>Deselect to Exclude:</b>"))
+        chk_main_layout.addWidget(QLabel(Lang.get('deselect_exclude')))
         
         # Constrain layout boundaries using a scroll viewport
         scroll_area = QScrollArea()
@@ -829,7 +1159,7 @@ class SubjectSelectorDialog(QDialog):
         scroll_area.setWidget(scroll_widget)
         chk_main_layout.addWidget(scroll_area)
             
-        btn_confirm = QPushButton("Confirm Selection")
+        btn_confirm = QPushButton(Lang.get('confirm'))
         btn_confirm.setObjectName("AccentButton")
         btn_confirm.clicked.connect(self.confirm_selection)
         chk_main_layout.addWidget(btn_confirm)
@@ -845,7 +1175,7 @@ class SubjectSelectorDialog(QDialog):
 
     def _load_video(self):
         if not os.path.exists(self.video_path):
-            self.video_label.setText(f"Error: Video not found\n{self.video_path}")
+            self.video_label.setText(f"{Lang.get('vid_not_found')}{self.video_path}")
             return
         self.cap = cv2.VideoCapture(self.video_path)
         self.show_frame(0)
@@ -854,11 +1184,11 @@ class SubjectSelectorDialog(QDialog):
         if self.playing:
             self.timer.stop()
             self.playing = False
-            self.btn_play.setText("Play")
+            self.btn_play.setText(Lang.get('play'))
         else:
             self.timer.start(33) # ~30fps
             self.playing = True
-            self.btn_play.setText("Pause")
+            self.btn_play.setText(Lang.get('pause'))
 
     def next_frame(self):
         if self.current_frame < self.total_frames - 1:
@@ -1030,13 +1360,13 @@ class DualVideoPlayer(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         video_layout = QHBoxLayout()
         
-        self.raw_label = QLabel("Raw Video")
+        self.raw_label = QLabel(Lang.get('raw_video'))
         self.raw_label.setAlignment(Qt.AlignCenter)
         self.raw_label.setStyleSheet("background-color: black; border: 1px solid #333;")
         self.raw_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.raw_label.setMinimumSize(100, 100) 
         
-        self.overlay_label = QLabel("Overlay")
+        self.overlay_label = QLabel(Lang.get('overlay'))
         self.overlay_label.setAlignment(Qt.AlignCenter)
         self.overlay_label.setStyleSheet("background-color: black; border: 1px solid #333;")
         self.overlay_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -1063,7 +1393,7 @@ class DualVideoPlayer(QWidget):
         layout.addLayout(controls)
         
         # Status Label (Only created ONCE now)
-        self.status_lbl = QLabel("No Video", self)
+        self.status_lbl = QLabel(Lang.get('no_video'), self)
         self.status_lbl.setStyleSheet("color: white; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 3px;")
         self.status_lbl.adjustSize()
         self.status_lbl.move(10, 10)
@@ -1090,7 +1420,7 @@ class DualVideoPlayer(QWidget):
         self.slider.setEnabled(False)
         self.raw_label.clear()
         self.overlay_label.clear()
-        self.status_lbl.setText("Buffering videos to RAM...")
+        self.status_lbl.setText(Lang.get('buffering'))
         self.status_lbl.show()
         
         if raw_path and os.path.exists(raw_path):
@@ -1107,7 +1437,7 @@ class DualVideoPlayer(QWidget):
 
     def _on_raw_loaded(self, frames, path):
         if path == "error" or not frames:
-            self.status_lbl.setText("Error loading raw video.")
+            self.status_lbl.setText(Lang.get('error_loading_raw'))
             return
         # THREAD SAFETY: Convert QImage to QPixmap on the Main Thread
         self.raw_cache = [QPixmap.fromImage(img) for img in frames]
@@ -1464,7 +1794,7 @@ class CalibrationReviewDialog(QDialog):
     """Displays the generated checkerboard calibration images."""
     def __init__(self, parent, session_path):
         super().__init__(parent)
-        self.setWindowTitle("Extrinsics Calibration Review")
+        self.setWindowTitle(Lang.get('calib_review'))
         self.resize(1000, 700)
         self.setStyleSheet(parent.styleSheet())
         layout = QVBoxLayout(self)
@@ -1478,7 +1808,7 @@ class CalibrationReviewDialog(QDialog):
         images = list(calib_dir.glob("*_calib.jpg"))
 
         if not images:
-            layout.addWidget(QLabel("No calibration images found. The detection may have failed on the first frame."))
+            layout.addWidget(QLabel(Lang.get('no_calib_images')))
         else:
             row, col = 0, 0
             for img_path in images:
@@ -1509,7 +1839,7 @@ class CalibrationReviewDialog(QDialog):
         scroll.setWidget(content)
         layout.addWidget(scroll)
         
-        btn = QPushButton("Acknowledge & Close")
+        btn = QPushButton(Lang.get('acknowledge_close'))
         btn.setObjectName("AccentButton")
         btn.clicked.connect(self.accept)
         layout.addWidget(btn)
@@ -1524,7 +1854,7 @@ class PipelineConfigDialog(QDialog):
         self.step = step
         self.valid_tags = valid_tags or []
         
-        self.setWindowTitle("Pipeline Configuration")
+        self.setWindowTitle(Lang.get('pipeline_config'))
         self.resize(400, 500)
         self.setStyleSheet(parent.styleSheet())
         
@@ -1535,25 +1865,25 @@ class PipelineConfigDialog(QDialog):
         layout = QVBoxLayout(self)
         
         # GPU Selection
-        layout.addWidget(QLabel("Select GPU:"))
+        layout.addWidget(QLabel(Lang.get('select_gpu')))
         self.gpu_combo = QComboBox()
-        self.gpu_combo.setToolTip("Choose GPU for processing (requires CUDA)")
+        self.gpu_combo.setToolTip(Lang.get('gpu_tip'))
         self.gpu_map = self._get_gpu_info()
         self.gpu_combo.addItems(list(self.gpu_map.keys()))
         layout.addWidget(self.gpu_combo)
 
         # --- NEW: Pose Estimator Selection ---
-        layout.addWidget(QLabel("Pose Estimator:"))
+        layout.addWidget(QLabel(Lang.get('pose_estimator')))
         self.pose_combo = QComboBox()
-        self.pose_combo.setToolTip("Select the AI model for pose estimation")
+        self.pose_combo.setToolTip(Lang.get('pose_tip'))
         self.pose_combo.addItems(["OpenPose", "RTMPose"])
         layout.addWidget(self.pose_combo)
         # -------------------------------------
         
         # Resolution Selection
-        layout.addWidget(QLabel("Resolution:"))
+        layout.addWidget(QLabel(Lang.get('resolution')))
         self.res_combo = QComboBox()
-        self.res_combo.setToolTip("Select processing resolution preset")
+        self.res_combo.setToolTip(Lang.get('res_tip'))
         self.res_combo.addItems(["1x368", "1x736", "1x736_2scales","736x1 (Landscape)"])
         layout.addWidget(self.res_combo)
 
@@ -1562,7 +1892,7 @@ class PipelineConfigDialog(QDialog):
         self._update_res_options(self.pose_combo.currentText())
         
         # Trial Selection
-        layout.addWidget(QLabel("Select Trials to Process:"))
+        layout.addWidget(QLabel(Lang.get('select_trials')))
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         self.trial_content = QWidget()
@@ -1576,39 +1906,50 @@ class PipelineConfigDialog(QDialog):
         
         # Buttons
         btn_box = QHBoxLayout()
-        btn_cancel = QPushButton("Cancel")
+        btn_cancel = QPushButton(Lang.get('cancel'))
         btn_cancel.clicked.connect(self.reject)
-        btn_cancel.setToolTip("Cancel pipeline execution")
+        btn_cancel.setToolTip(Lang.get('cancel_pipe_tip'))
         
-        btn_run = QPushButton("RUN PIPELINE")
+        btn_run = QPushButton(Lang.get('run_pipeline'))
         btn_run.setObjectName("AccentButton")
         # Route to our new validation checker before accepting
         btn_run.clicked.connect(self._validate_and_accept_pipeline)
-        btn_run.setToolTip("Start processing selected trials")
+        btn_run.setToolTip(Lang.get('run_pipe_tip'))
         
         btn_box.addWidget(btn_cancel)
         btn_box.addWidget(btn_run)
         layout.addLayout(btn_box)
 
     def _validate_and_accept_pipeline(self):
-        """Prevents running Kinematics on data that hasn't passed through the Pose step yet."""
+        """Validates conditions before allowing pipeline execution."""
+        est = self.pose_combo.currentText().lower()
+        res_text = self.res_combo.currentText()
+        
+        # 1. High-Resolution Warning
+        if est == "openpose" and "736" in res_text:
+            reply = QMessageBox.question(
+                self,
+                Lang.get('perf_warning'),
+                Lang.get('perf_prompt'),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                return
+
+        # 2. Kinematics Prerequisites
         if self.step == "kinematics":
-            est = self.pose_combo.currentText().lower()
-            res_text = self.res_combo.currentText()
-            
-            # Reconstruct the expected folder tag 
             if est == "openpose":
                 folder_tag = f"OpenPose_{res_text}"
             else:
                 cres = "l" if "-l" in res_text.lower() else "m"
                 folder_tag = f"RTMPose_{cres}"
                 
-            # Cross-reference with the hard drive scan
             if folder_tag not in self.valid_tags:
                 QMessageBox.warning(
                     self, 
-                    "Data Missing", 
-                    f"No 2D tracking data found for {folder_tag}.\n\nPlease run '3. Run Pose' with these exact settings first."
+                    Lang.get('data_missing'), 
+                    Lang.get('no_pose_data_prompt')
                 )
                 return
                 
@@ -1668,7 +2009,7 @@ class PipelineConfigDialog(QDialog):
         for trial_name in sorted_trials:
             checkbox = QCheckBox(trial_name)
             checkbox.setChecked(True)
-            checkbox.setToolTip(f"Process trial: {trial_name}")
+            checkbox.setToolTip(f"{Lang.get('process_trial_tip')} {trial_name}")
             
             # Make the neutral trial bold so it stands out as the anchor trial
             if trial_name.lower() == 'neutral':
@@ -1678,7 +2019,7 @@ class PipelineConfigDialog(QDialog):
             self.checks[trial_name] = checkbox
         
         if not self.checks:
-            label = QLabel("No trials available for processing")
+            label = QLabel(Lang.get('no_trials_avail'))
             label.setStyleSheet("color: #888;")
             self.trial_layout.addWidget(label)
 
@@ -1708,7 +2049,7 @@ class CreateSessionDialog(QDialog):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Create New Session")
+        self.setWindowTitle(Lang.get('create_new_session'))
         # Apply the current style from the parent window
         if parent:
             self.setStyleSheet(parent.styleSheet())
@@ -1724,21 +2065,21 @@ class CreateSessionDialog(QDialog):
         form = QFormLayout()
         
         self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("e.g., Session_2024_01")
-        self.name_edit.setToolTip("Unique identifier for this session")
+        self.name_edit.setPlaceholderText(Lang.get('eg_session'))
+        self.name_edit.setToolTip(Lang.get('session_id_tip'))
         
         self.subject_edit = QLineEdit()
-        self.subject_edit.setPlaceholderText("e.g., Subject_001")
-        self.subject_edit.setToolTip("Subject identifier for this capture session")
+        self.subject_edit.setPlaceholderText(Lang.get('eg_subject'))
+        self.subject_edit.setToolTip(Lang.get('subject_id_tip'))
 
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["m", "f"]) 
         
         self.height_edit = QLineEdit(str(Config.DEFAULT_HEIGHT))
-        self.height_edit.setToolTip(f"Subject height in meters ({Config.MIN_HEIGHT}-{Config.MAX_HEIGHT}m)")
+        self.height_edit.setToolTip(f"{Lang.get('height_tip')} ({Config.MIN_HEIGHT}-{Config.MAX_HEIGHT}m)")
         
         self.weight_edit = QLineEdit(str(Config.DEFAULT_WEIGHT))
-        self.weight_edit.setToolTip(f"Subject weight in kilograms ({Config.MIN_WEIGHT}-{Config.MAX_WEIGHT}kg)")
+        self.weight_edit.setToolTip(f"{Lang.get('weight_tip')} ({Config.MIN_WEIGHT}-{Config.MAX_WEIGHT}kg)")
         
         self.tag_combo = QComboBox()
         self.tag_combo.addItems([
@@ -1751,61 +2092,57 @@ class CreateSessionDialog(QDialog):
         
         self.orientation_combo = QComboBox()
         self.orientation_combo.addItems(["Portrait (Default)", "Landscape", "Mixed"])
-        self.orientation_combo.setToolTip("Portrait: Phone held vertically.\nLandscape: Phone held horizontally.")
+        self.orientation_combo.setToolTip(Lang.get('orient_tip'))
         
-        form.addRow("Session Name:*", self.name_edit)
-        form.addRow("Subject ID:*", self.subject_edit)
-        form.addRow("Gender:*", self.gender_combo)
-        form.addRow("Height (m):*", self.height_edit)
-        form.addRow("Weight (kg):*", self.weight_edit)
-        form.addRow("Tag:", self.tag_combo)
+        form.addRow(Lang.get('session_name'), self.name_edit)
+        form.addRow(Lang.get('subject_id'), self.subject_edit)
+        form.addRow(Lang.get('gender'), self.gender_combo)
+        form.addRow(Lang.get('height'), self.height_edit)
+        form.addRow(Lang.get('weight'), self.weight_edit)
+        form.addRow(Lang.get('tag'), self.tag_combo)
         
         layout.addLayout(form)
         
         # --- Camera & Calibration Settings ---
-        layout.addWidget(QLabel("<b>Camera & Calibration Settings</b>"))
+        layout.addWidget(QLabel(f"<b>{Lang.get('cam_calib_settings')}</b>"))
         form_calib = QFormLayout()
 
         # 1. Camera Type (Priority 2)
         self.cam_type_combo = QComboBox()
         self.cam_type_combo.addItems(["iPhone", "Android", "Other", "Mixed"])
-        self.cam_type_combo.setToolTip("Select the type of camera device being used")
+        self.cam_type_combo.setToolTip(Lang.get('cam_type_tip'))
 
         # 2. Checkerboard Placement (Priority 1)
         self.placement_combo = QComboBox()
         self.placement_combo.addItems(["Vertical (Wall)", "Horizontal (Ground)"])
-        self.placement_combo.setToolTip(
-            "Vertical: Board matches gravity (standard).\n"
-            "Horizontal: Board is flat on ground (good for 360° setups)."
-        )
+        self.placement_combo.setToolTip(Lang.get('placement_tip'))
 
         self.rows_edit = QLineEdit(str(Config.DEFAULT_CHECKERBOARD_ROWS))
         self.cols_edit = QLineEdit(str(Config.DEFAULT_CHECKERBOARD_COLS))
         self.size_edit = QLineEdit(str(Config.DEFAULT_SQUARE_SIZE))
         self.cams_edit = QLineEdit(str(Config.DEFAULT_NUM_CAMERAS))
         
-        form_calib.addRow("Camera Type:", self.cam_type_combo)
-        form_calib.addRow("Camera Orientation:", self.orientation_combo)
-        form_calib.addRow("Camera Nums:", self.cams_edit)
-        form_calib.addRow("Board Placement:", self.placement_combo)
-        form_calib.addRow("Rows:", self.rows_edit)
-        form_calib.addRow("Cols:", self.cols_edit)
-        form_calib.addRow("Square Size (mm):", self.size_edit)
-        
+        form_calib.addRow(Lang.get('cam_type'), self.cam_type_combo)
+        form_calib.addRow(Lang.get('cam_orientation'), self.orientation_combo)
+        form_calib.addRow(Lang.get('cam_nums'), self.cams_edit)
+        form_calib.addRow(Lang.get('board_placement'), self.placement_combo)
+        form_calib.addRow(Lang.get('rows'), self.rows_edit)
+        form_calib.addRow(Lang.get('cols'), self.cols_edit)
+        form_calib.addRow(Lang.get('square_size'), self.size_edit)
 
         layout.addLayout(form_calib)
         
         # Required fields note
-        note_label = QLabel("* Required fields")
+        note_label = QLabel(Lang.get('req_fields'))
         note_label.setStyleSheet("color: #888; font-size: 11px;")
         layout.addWidget(note_label)
         
         # Buttons
         btn_box = QHBoxLayout()
-        ok_btn = QPushButton("Create")
+        ok_btn = QPushButton(Lang.get('create'))
         ok_btn.setObjectName("AccentButton")
         ok_btn.clicked.connect(self._validate_and_accept)
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(Lang.get('cancel'))
         cancel_btn.clicked.connect(self.reject)
         
         btn_box.addWidget(cancel_btn)
@@ -1888,7 +2225,7 @@ class CreateSessionDialog(QDialog):
         if errors:
             QMessageBox.warning(
                 self,
-                "Validation Error",
+                Lang.get('val_error'),
                 "Please correct the following errors:\n\n" + "\n".join(f"• {e}" for e in errors)
             )
             return
@@ -1919,13 +2256,12 @@ class CreateSessionDialog(QDialog):
         }
 
     def _handle_tag_change(self, text):
-        """If 'Other' is selected, prompt for a custom string."""
         if text == "Other":
             from PyQt5.QtWidgets import QInputDialog
             custom_tag, ok = QInputDialog.getText(
                 self, 
-                "Custom Subject Tag", 
-                "Enter specific subject condition/tag:",
+                Lang.get('custom_tag_title'), 
+                Lang.get('custom_tag_prompt'),
                 text=""
             )
             
@@ -1941,7 +2277,7 @@ class PerCameraConfigDialog(QDialog):
     """Dialogue to assign device types and orientations to individual cameras."""
     def __init__(self, parent, num_cameras, default_type, default_orient):
         super().__init__(parent)
-        self.setWindowTitle("Per-Camera Configuration")
+        self.setWindowTitle(Lang.get('per_cam_config'))
         layout = QVBoxLayout(self)
         self.configs = {}
 
@@ -1972,7 +2308,7 @@ class PerCameraConfigDialog(QDialog):
         
         layout.addLayout(form)
         
-        btn = QPushButton("Confirm Assignments")
+        btn = QPushButton(Lang.get('confirm_assign'))
         btn.clicked.connect(self.accept)
         layout.addWidget(btn)
 
@@ -2065,6 +2401,22 @@ class OpenCapPro(QMainWindow):
         self.update_thread = UpdateCheckerThread()
         self.update_thread.finished_check.connect(self._log_version_status)
         self.update_thread.start()
+
+    def cancel_pipeline(self):
+        if self.process and self.process.state() == QProcess.Running:
+            reply = QMessageBox.question(
+                self, Lang.get('confirm_cancel'), 
+                Lang.get('cancel_prompt'),
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                self.log_box.append("\n<span style='color: #ffaa00;'><b>>>> ABORTING PROCESS...</b></span>")
+                self.process.kill() # kill() is safer than terminate() for Python subprocesses
+                self.process.waitForFinished(2000)
+                
+                self.progress_bar.setVisible(False)
+                self.btn_cancel_process.setVisible(False)
+                self.progress_label.setText(Lang.get('aborted_user'))
 
     def _toggle_calibration_view(self, checked):
         """Passes the current session path down to the 3D viewer to draw the cameras."""
@@ -2199,9 +2551,9 @@ class OpenCapPro(QMainWindow):
                     dlg = CalibrationReviewDialog(self, self.data_dir / session)
                     dlg.exec_()
                 else:
-                    QMessageBox.information(self, "Success", "Processing Complete!")
+                    QMessageBox.information(self, Lang.get('success'), Lang.get('proc_complete'))
             else:
-                QMessageBox.information(self, "Success", "Processing Complete!")
+                QMessageBox.information(self, Lang.get('success'), Lang.get('proc_complete'))
         else:
             self.log_box.append(f"\n>>> ERROR: Failed with code {exit_code}")
 
@@ -2217,15 +2569,26 @@ class OpenCapPro(QMainWindow):
         progress_layout = QVBoxLayout(progress_container)
         progress_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.progress_label = QLabel("Idle")
+        self.progress_label = QLabel(Lang.get('idle'))
         self.progress_label.setStyleSheet("color: #888; font-size: 11px; border: none;")
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         self.progress_bar.setMaximumHeight(15)
+
+        # --- NEW: Cancel Button ---
+        self.btn_cancel_process = QPushButton(Lang.get('cancel_process'))
+        self.btn_cancel_process.setStyleSheet("background-color: #8b0000; color: white; font-weight: bold;")
+        self.btn_cancel_process.setVisible(False)
+        self.btn_cancel_process.clicked.connect(self.cancel_pipeline)
+        
+        # Group the progress bar and button horizontally
+        prog_bar_layout = QHBoxLayout()
+        prog_bar_layout.addWidget(self.progress_bar)
+        prog_bar_layout.addWidget(self.btn_cancel_process)
         
         progress_layout.addWidget(self.progress_label)
-        progress_layout.addWidget(self.progress_bar)
+        progress_layout.addLayout(prog_bar_layout) # Replaced the direct progress_bar add
         log_layout.addWidget(progress_container)
         
         # Log output - Removed fixed height so it respects the splitter
@@ -2235,56 +2598,104 @@ class OpenCapPro(QMainWindow):
         log_layout.addWidget(self.log_box)
     
     def _create_menu_bar(self):
-        """Create menu bar with shortcuts"""
         menubar = self.menuBar()
+        self.file_menu = menubar.addMenu(Lang.get('file_menu'))
         
-        # File menu
-        file_menu = menubar.addMenu('&File')
+        self.new_action = QAction(Lang.get('new_session_menu'), self)
+        self.new_action.setShortcut('Ctrl+N')
+        self.new_action.triggered.connect(self.open_new_session_dialog)
+        self.file_menu.addAction(self.new_action)
         
-        new_action = QAction('&New Session...', self)
-        new_action.setShortcut('Ctrl+N')
-        new_action.triggered.connect(self.open_new_session_dialog)
-        new_action.setToolTip("Create a new capture session")
-        file_menu.addAction(new_action)
+        self.refresh_action = QAction(Lang.get('refresh_menu'), self)
+        self.refresh_action.setShortcut('Ctrl+R')
+        self.refresh_action.triggered.connect(self.refresh_sessions)
+        self.file_menu.addAction(self.refresh_action)
         
-        refresh_action = QAction('&Refresh Sessions', self)
-        refresh_action.setShortcut('Ctrl+R')
-        refresh_action.triggered.connect(self.refresh_sessions)
-        refresh_action.setToolTip("Refresh session list from disk")
-        file_menu.addAction(refresh_action)
-        
-        file_menu.addSeparator()
-        
-        # Recent sessions submenu
-        self.recent_menu = file_menu.addMenu('Recent Sessions')
+        self.file_menu.addSeparator()
+        self.recent_menu = self.file_menu.addMenu(Lang.get('recent_menu'))
         self._update_recent_menu()
         
-        file_menu.addSeparator()
-        
-        quit_action = QAction('&Quit', self)
-        quit_action.setShortcut('Ctrl+Q')
-        quit_action.triggered.connect(self.close)
-        file_menu.addAction(quit_action)
+        self.file_menu.addSeparator()
+        self.quit_action = QAction(Lang.get('quit_menu'), self)
+        self.quit_action.setShortcut('Ctrl+Q')
+        self.quit_action.triggered.connect(self.close)
+        self.file_menu.addAction(self.quit_action)
 
-        # --- FIX 7: VIEW MENU FOR THEME ---
-        view_menu = menubar.addMenu('&View')
+        self.view_menu = menubar.addMenu(Lang.get('view_menu'))
         
-        theme_action = QAction('&Toggle Dark/Light Mode', self)
-        theme_action.setShortcut('Ctrl+T')
-        theme_action.triggered.connect(self.toggle_theme)
-        view_menu.addAction(theme_action)
-        # ----------------------------------
+        self.theme_action = QAction(Lang.get('theme_toggle'), self)
+        self.theme_action.setShortcut('Ctrl+T')
+        self.theme_action.triggered.connect(self.toggle_theme)
+        self.view_menu.addAction(self.theme_action)
         
-        # Help menu
-        help_menu = menubar.addMenu('&Help')
+        self.lang_action = QAction(Lang.get('lang_toggle'), self)
+        self.lang_action.triggered.connect(self.toggle_language)
+        self.view_menu.addAction(self.lang_action)
         
-        about_action = QAction('&About', self)
-        about_action.triggered.connect(self._show_about)
-        help_menu.addAction(about_action)
+        self.help_menu = menubar.addMenu(Lang.get('help_menu'))
+        self.about_action = QAction(Lang.get('about_menu'), self)
+        self.about_action.triggered.connect(self._show_about)
+        self.help_menu.addAction(self.about_action)
 
-        update_action = QAction('&Check for Updates...', self)
-        update_action.triggered.connect(self.manual_update_check)
-        help_menu.addAction(update_action)
+    def toggle_language(self):
+        """Swaps the global language state and forces a UI refresh."""
+        Lang.CURRENT = 'KO' if Lang.CURRENT == 'EN' else 'EN'
+        
+        # 1. Update Menus (Use setTitle for menus, setText for actions)
+        self.file_menu.setTitle(Lang.get('file_menu'))
+        self.view_menu.setTitle(Lang.get('view_menu'))
+        self.help_menu.setTitle(Lang.get('help_menu'))
+        self.recent_menu.setTitle(Lang.get('recent_menu'))
+        
+        self.new_action.setText(Lang.get('new_session_menu'))
+        self.refresh_action.setText(Lang.get('refresh_menu'))
+        self.quit_action.setText(Lang.get('quit_menu'))
+        self.theme_action.setText(Lang.get('theme_toggle'))
+        self.lang_action.setText(Lang.get('lang_toggle'))
+        self.about_action.setText(Lang.get('about_menu'))
+        
+        # 2. Update Header Buttons
+        self.new_session_btn.setText(Lang.get('new_session'))
+        self.edit_meta_btn.setText(Lang.get('edit_meta'))
+        self.refresh_list_btn.setText(Lang.get('refresh_list'))
+        
+        # 3. Update Import Panel
+        self.trial_type_label.setText(Lang.get('trial_type_label'))
+        self.trial_name_edit.setPlaceholderText(Lang.get('trial_name_placeholder'))
+        self.trial_name_edit.setToolTip(Lang.get('trial_name_tip'))
+        self.execute_import_btn.setText(Lang.get('execute_import'))
+        
+        # Update Import Toggle Button dynamically
+        is_import_visible = self.toggle_import_btn.isChecked()
+        self.toggle_import_btn.setText(Lang.get('import_trial_down') if is_import_visible else Lang.get('import_trial_right'))
+        
+        # 4. Update Pipeline Panel & Checkboxes
+        self.research_mode_cb.setText(Lang.get('research_mode'))
+        self.show_calib_cb.setText(Lang.get('show_calib'))
+        
+        is_pipe_visible = self.toggle_pipeline_btn.isChecked()
+        self.toggle_pipeline_btn.setText(Lang.get('pipeline_exec_down') if is_pipe_visible else Lang.get('pipeline_exec_right'))
+        
+        self.btn_calib_clin.setText(Lang.get('step_1'))
+        self.btn_pipe_full.setText(Lang.get('step_2_full'))
+        self.btn_calib_res.setText(Lang.get('step_1'))
+        self.btn_extrinsics.setText(Lang.get('step_2_ext'))
+        self.btn_pose.setText(Lang.get('step_3'))
+        self.btn_kinematics.setText(Lang.get('step_4'))
+        
+        # 5. Update Log Area
+        self.btn_cancel_process.setText(Lang.get('cancel_process'))
+        self.log_box.setPlaceholderText(Lang.get('log_placeholder'))
+        if self.progress_label.text() in ['Idle', '대기 중']:
+            self.progress_label.setText(Lang.get('idle'))
+            
+        # 6. Re-render Camera Slots (Updates Browse & Clear buttons)
+        current_session = self.session_combo.currentText()
+        if current_session:
+            self.refresh_cam_slots(current_session)
+        
+        msg = "언어가 변경되었습니다. UI를 새로고침하려면 창을 다시 열어야 할 수 있습니다." if Lang.CURRENT == 'KO' else "Language changed. Re-open dialogs to see updates."
+        QMessageBox.information(self, "Language / 언어", msg)
 
     # --- FIX 7: THEME TOGGLE FUNCTION ---
     def toggle_theme(self):
@@ -2352,25 +2763,26 @@ class OpenCapPro(QMainWindow):
         header_layout.addWidget(self.logo_label)
 
         # New session button
-        new_btn = QPushButton("+ New Session")
-        new_btn.setObjectName("AccentButton")
-        new_btn.clicked.connect(self.open_new_session_dialog)
-        new_btn.setToolTip("Create new session (Ctrl+N)")
-        header_layout.addWidget(new_btn)
+        self.new_session_btn = QPushButton(Lang.get('new_session'))
+        self.new_session_btn.setObjectName("AccentButton")
+        self.new_session_btn.clicked.connect(self.open_new_session_dialog)
+        self.new_session_btn.setToolTip("Create new session (Ctrl+N)")
+        header_layout.addWidget(self.new_session_btn)
 
         header_layout.addStretch()
 
         # --- RIGHT SIDE: Management Controls ---
-        self.edit_meta_btn = QPushButton("Edit Metadata")
+        self.edit_meta_btn = QPushButton(Lang.get('edit_meta'))
         self.edit_meta_btn.clicked.connect(self.open_metadata_editor)
         header_layout.addWidget(self.edit_meta_btn)
         
-        refresh_btn = QPushButton("Refresh List")
-        refresh_btn.clicked.connect(self.refresh_sessions)
-        header_layout.addWidget(refresh_btn)
+        self.refresh_list_btn = QPushButton(Lang.get('refresh_list'))
+        self.refresh_list_btn.clicked.connect(self.refresh_sessions)
+        header_layout.addWidget(self.refresh_list_btn)
         
+        # --- RESTORED: Session Dropdown Menu ---
         self.session_combo = QComboBox()
-        self.session_combo.setFixedWidth(200)
+        self.session_combo.setMinimumWidth(200)
         self.session_combo.currentTextChanged.connect(self.on_session_change)
         header_layout.addWidget(self.session_combo)
         
@@ -2393,7 +2805,7 @@ class OpenCapPro(QMainWindow):
 
         # Header with Toggle Button
         header_row = QHBoxLayout()
-        self.toggle_import_btn = QPushButton("▼ IMPORT TRIAL")
+        self.toggle_import_btn = QPushButton(Lang.get('import_trial_down'))
         self.toggle_import_btn.setCheckable(True)
         self.toggle_import_btn.setChecked(True)
         self.toggle_import_btn.setStyleSheet("text-align: left; font-weight: bold; border: none; background: none;")
@@ -2407,7 +2819,8 @@ class OpenCapPro(QMainWindow):
         content_layout.setContentsMargins(10, 0, 10, 10)
 
         type_row = QHBoxLayout()
-        type_row.addWidget(QLabel("TRIAL TYPE:", styleSheet="font-weight:bold; color:#888;"))
+        self.trial_type_label = QLabel(Lang.get('trial_type_label'), styleSheet="font-weight:bold; color:#888;")
+        type_row.addWidget(self.trial_type_label)
         
         # Radio buttons for trial types
         self.type_group = QButtonGroup(self)
@@ -2431,20 +2844,17 @@ class OpenCapPro(QMainWindow):
         
         # Trial name input
         self.trial_name_edit = QLineEdit()
-        self.trial_name_edit.setPlaceholderText("Trial Name")
-        self.trial_name_edit.setToolTip(
-            "Custom name for dynamic trials.\n"
-            "Examples: walking_1, running_fast, jump_test"
-        )
+        self.trial_name_edit.setPlaceholderText(Lang.get('trial_name_placeholder'))
+        self.trial_name_edit.setToolTip(Lang.get('trial_name_tip'))
         type_row.addWidget(self.trial_name_edit)
         content_layout.addLayout(type_row)
         
         self.cam_slot_layout = QGridLayout()
         content_layout.addLayout(self.cam_slot_layout)
         
-        import_btn = QPushButton("EXECUTE IMPORT")
-        import_btn.clicked.connect(self.run_import)
-        content_layout.addWidget(import_btn)
+        self.execute_import_btn = QPushButton(Lang.get('execute_import'))
+        self.execute_import_btn.clicked.connect(self.run_import)
+        content_layout.addWidget(self.execute_import_btn)
         
         layout.addWidget(self.import_content)
         self.main_layout.addWidget(self.import_container)
@@ -2453,13 +2863,13 @@ class OpenCapPro(QMainWindow):
         """Minimizes the import section to save space."""
         is_visible = self.toggle_import_btn.isChecked()
         self.import_content.setVisible(is_visible)
-        self.toggle_import_btn.setText("▼ IMPORT TRIAL" if is_visible else "▶ IMPORT TRIAL")
+        self.toggle_import_btn.setText(Lang.get('import_trial_down') if is_visible else Lang.get('import_trial_right'))
 
     def _toggle_pipeline_visibility(self):
         """Minimizes the pipeline section to save space."""
         is_visible = self.toggle_pipeline_btn.isChecked()
         self.pipeline_content.setVisible(is_visible)
-        self.toggle_pipeline_btn.setText("▼ PIPELINE EXECUTION" if is_visible else "▶ PIPELINE EXECUTION")
+        self.toggle_pipeline_btn.setText(Lang.get('pipeline_exec_down') if is_visible else Lang.get('pipeline_exec_right'))
     
     def _get_trial_type_tooltip(self, trial_type: TrialType) -> str:
         """Get tooltip text for trial type"""
@@ -2479,7 +2889,7 @@ class OpenCapPro(QMainWindow):
 
         # --- Header Row (Toggle Button ONLY) ---
         header_row = QHBoxLayout()
-        self.toggle_pipeline_btn = QPushButton("▼ PIPELINE EXECUTION")
+        self.toggle_pipeline_btn = QPushButton(Lang.get('pipeline_exec_down'))
         self.toggle_pipeline_btn.setCheckable(True)
         self.toggle_pipeline_btn.setChecked(True)
         self.toggle_pipeline_btn.setStyleSheet("text-align: left; font-weight: bold; border: none; background: none;")
@@ -2495,11 +2905,11 @@ class OpenCapPro(QMainWindow):
         
         # --- RESEARCH MODE & CALIBRATION VIEW TOGGLES ---
         toggle_layout = QHBoxLayout()
-        self.research_mode_cb = QCheckBox("Research Mode (Granular Controls)")
+        self.research_mode_cb = QCheckBox(Lang.get('research_mode'))
         self.research_mode_cb.setStyleSheet("font-weight: bold; color: #888;")
         self.research_mode_cb.toggled.connect(self._toggle_research_mode)
         
-        self.show_calib_cb = QCheckBox("Show Calibration Setup")
+        self.show_calib_cb = QCheckBox(Lang.get('show_calib'))
         self.show_calib_cb.setStyleSheet("font-weight: bold; color: #888;")
         self.show_calib_cb.setEnabled(False) # Grey out by default
         self.show_calib_cb.toggled.connect(self._toggle_calibration_view)
@@ -2517,43 +2927,43 @@ class OpenCapPro(QMainWindow):
         clin_layout = QHBoxLayout(self.clinical_page)
         clin_layout.setContentsMargins(0, 0, 0, 0)
         
-        calibration_btn_clin = QPushButton("1. Process Intrinsics")
-        calibration_btn_clin.setFixedHeight(Config.BUTTON_HEIGHT)
-        calibration_btn_clin.clicked.connect(self.run_intrinsics)
+        self.btn_calib_clin = QPushButton(Lang.get('step_1'))
+        self.btn_calib_clin.setFixedHeight(Config.BUTTON_HEIGHT)
+        self.btn_calib_clin.clicked.connect(self.run_intrinsics)
         
-        pipeline_btn = QPushButton("2. Run Full Pipeline")
-        pipeline_btn.setObjectName("AccentButton")
-        pipeline_btn.setFixedHeight(Config.BUTTON_HEIGHT)
-        pipeline_btn.clicked.connect(lambda: self.run_pipeline(step="all"))
+        self.btn_pipe_full = QPushButton(Lang.get('step_2_full'))
+        self.btn_pipe_full.setObjectName("AccentButton")
+        self.btn_pipe_full.setFixedHeight(Config.BUTTON_HEIGHT)
+        self.btn_pipe_full.clicked.connect(lambda: self.run_pipeline(step="all"))
         
-        clin_layout.addWidget(calibration_btn_clin, 1) 
-        clin_layout.addWidget(pipeline_btn, 3)         
+        clin_layout.addWidget(self.btn_calib_clin, 1) 
+        clin_layout.addWidget(self.btn_pipe_full, 3)         
         
         # 2. RESEARCH PAGE
         self.research_page = QWidget()
         res_layout = QHBoxLayout(self.research_page)
         res_layout.setContentsMargins(0, 0, 0, 0)
         
-        calibration_btn_res = QPushButton("1. Process Intrinsics")
-        calibration_btn_res.setFixedHeight(Config.BUTTON_HEIGHT)
-        calibration_btn_res.clicked.connect(self.run_intrinsics)
+        self.btn_calib_res = QPushButton(Lang.get('step_1'))
+        self.btn_calib_res.setFixedHeight(Config.BUTTON_HEIGHT)
+        self.btn_calib_res.clicked.connect(self.run_intrinsics)
         
-        btn_extrinsics = QPushButton("2. Calibrate Extrinsics")
-        btn_extrinsics.setFixedHeight(Config.BUTTON_HEIGHT)
-        btn_extrinsics.clicked.connect(lambda: self.run_pipeline(step="calibrate"))
+        self.btn_extrinsics = QPushButton(Lang.get('step_2_ext'))
+        self.btn_extrinsics.setFixedHeight(Config.BUTTON_HEIGHT)
+        self.btn_extrinsics.clicked.connect(lambda: self.run_pipeline(step="calibrate"))
         
-        btn_pose = QPushButton("3. 2D Pose Estimation")
-        btn_pose.setFixedHeight(Config.BUTTON_HEIGHT)
-        btn_pose.clicked.connect(lambda: self.run_pipeline(step="pose"))
+        self.btn_pose = QPushButton(Lang.get('step_3'))
+        self.btn_pose.setFixedHeight(Config.BUTTON_HEIGHT)
+        self.btn_pose.clicked.connect(lambda: self.run_pipeline(step="pose"))
         
-        btn_kinematics = QPushButton("4. 3D Pose and OpenSim")
-        btn_kinematics.setFixedHeight(Config.BUTTON_HEIGHT)
-        btn_kinematics.clicked.connect(lambda: self.run_pipeline(step="kinematics"))
+        self.btn_kinematics = QPushButton(Lang.get('step_4'))
+        self.btn_kinematics.setFixedHeight(Config.BUTTON_HEIGHT)
+        self.btn_kinematics.clicked.connect(lambda: self.run_pipeline(step="kinematics"))
         
-        res_layout.addWidget(calibration_btn_res, 1)
-        res_layout.addWidget(btn_extrinsics, 1)
-        res_layout.addWidget(btn_pose, 1)
-        res_layout.addWidget(btn_kinematics, 1)
+        res_layout.addWidget(self.btn_calib_res, 1)
+        res_layout.addWidget(self.btn_extrinsics, 1)
+        res_layout.addWidget(self.btn_pose, 1)
+        res_layout.addWidget(self.btn_kinematics, 1)
         
         # Add pages to stack
         self.pipeline_stack.addWidget(self.clinical_page)
@@ -2620,7 +3030,7 @@ class OpenCapPro(QMainWindow):
         progress_layout = QVBoxLayout(progress_container)
         progress_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.progress_label = QLabel("Idle")
+        self.progress_label = QLabel(Lang.get('idle'))
         self.progress_label.setStyleSheet("color: #888; font-size: 11px;")
         
         self.progress_bar = QProgressBar()
@@ -2635,7 +3045,7 @@ class OpenCapPro(QMainWindow):
         self.log_box = QTextEdit()
         self.log_box.setReadOnly(True)
         self.log_box.setFixedHeight(Config.LOG_HEIGHT)
-        self.log_box.setPlaceholderText("Process output will appear here...")
+        self.log_box.setPlaceholderText(Lang.get('log_placeholder'))
         log_layout.addWidget(self.log_box)
         
         self.main_layout.addWidget(log_container)
@@ -2649,7 +3059,7 @@ class OpenCapPro(QMainWindow):
         self.session_status_label = QLabel()
         self.status_bar.addPermanentWidget(self.session_status_label)
         
-        self.status_bar.showMessage("Ready")
+        self.status_bar.showMessage(Lang.get('ready'))
     
     def _setup_shortcuts(self):
         """Configure keyboard shortcuts"""
@@ -2724,15 +3134,15 @@ class OpenCapPro(QMainWindow):
         self.cam_buttons = {}
         for i, cam in enumerate(cameras):
             label = QLabel(f"{cam}:")
-            path_label = QLabel("No files selected")
+            path_label = QLabel(Lang.get('no_files_sel'))
             path_label.setStyleSheet("color: gray;")
             
             # Browse Button
-            browse_btn = QPushButton("Browse")
+            browse_btn = QPushButton(Lang.get('browse'))
             browse_btn.clicked.connect(lambda checked, c=cam, l=path_label: self._browse_file(c, l))
             
             # Clear Button (NEW)
-            clear_btn = QPushButton("Clear")
+            clear_btn = QPushButton(Lang.get('clear'))
             clear_btn.setFixedWidth(60)
             clear_btn.clicked.connect(lambda checked, c=cam, l=path_label: self._clear_selection(c, l))
             
@@ -2747,7 +3157,6 @@ class OpenCapPro(QMainWindow):
         logger.info(f"Created {len(cameras)} camera slot(s)")
     
     def _browse_file(self, camera: str, label: QLabel) -> None:
-        """Browse for one or more video files"""
         file_paths, _ = QFileDialog.getOpenFileNames(
             self, f"Select Videos for {camera}", "", 
             "Video Files (*.mp4 *.avi *.mov);;All Files (*.*)"
@@ -2777,7 +3186,7 @@ class OpenCapPro(QMainWindow):
     def _clear_selection(self, camera: str, label: QLabel) -> None:
         """Resets the selection for a specific camera"""
         self.cam_buttons[camera]["paths"] = []
-        label.setText("No files selected")
+        label.setText(Lang.get('no_files_sel'))
         label.setStyleSheet("color: gray; font-weight: normal;")
         logger.info(f"Cleared selection for {camera}")
     
@@ -3011,7 +3420,7 @@ class OpenCapPro(QMainWindow):
         # 1. Basic Validation
         files_staged = any(data.get("paths") for data in self.cam_buttons.values())
         if not files_staged or not session or not trial_name:
-            QMessageBox.warning(self, "Input Error", "Ensure session is selected, trial is named, and files are browsed.")
+            QMessageBox.warning(self, Lang.get('input_error'), Lang.get('input_error_prompt'))
             return
 
         # 2. Sanitize Name
@@ -3032,7 +3441,7 @@ class OpenCapPro(QMainWindow):
         if conflict_found:
             reply = QMessageBox.question(
                 self, 
-                "Folder Already Exists", 
+                Lang.get('folder_exists'), 
                 f"Videos already exist in the '{final_name}' folder.\n\nDo you want to overwrite them?\n\n• Yes: Delete old videos and replace.\n• No: Keep old videos and append a suffix (_1, _2) to the new ones.",
                 QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
                 QMessageBox.Cancel
@@ -3077,13 +3486,13 @@ class OpenCapPro(QMainWindow):
                         shutil.copy(str(source), str(dest_file))
                         files_copied += 1
             
-            QMessageBox.information(self, "Success", f"Imported {files_copied} files into '{final_name}'")
+            QMessageBox.information(self, Lang.get('success'), f"Imported {files_copied} files into '{final_name}'")
             self.refresh_tree(session)
             self._update_status(f"Imported trial: {final_name}", success=True)
 
         except Exception as e:
             logger.error(f"Import failed: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error", f"Import failed: {str(e)}")
+            QMessageBox.critical(self, Lang.get('error'), f"Import failed: {str(e)}")
             self.refresh_tree(session)
     
     # -------------------------------------------------------------------------
@@ -3094,7 +3503,7 @@ class OpenCapPro(QMainWindow):
         """Triggers the calibration and manages button state."""
         session = self.session_combo.currentText()
         if not session:
-            QMessageBox.warning(self, "Warning", "Please select a session first.")
+            QMessageBox.warning(self, Lang.get('warning'), "Please select a session first.")
             return
 
         from PyQt5.QtWidgets import QInputDialog
@@ -3102,7 +3511,7 @@ class OpenCapPro(QMainWindow):
         choices = ["All Cameras"] + cams
         
         cam_choice, ok = QInputDialog.getItem(
-            self, "Calibrate Intrinsics", "Select Camera to Calibrate:", choices, 0, False
+            self, Lang.get('calib_intrinsics'), Lang.get('sel_cam_calib'), choices, 0, False
         )
         
         # Only execute if the user actually clicks 'OK' (doesn't cancel)
@@ -3115,7 +3524,7 @@ class OpenCapPro(QMainWindow):
             
             # Save original text to restore later, then change it
             self.original_btn_text = self.intrinsics_btn.text()
-            self.intrinsics_btn.setText("CALIBRATING...")
+            self.intrinsics_btn.setText(Lang.get('calibrating_btn'))
             
             target_str = target if target else 'All Cameras'
             self.log_box.append(f"\n>>> Starting Intrinsics Calibration for: {target_str}")
@@ -3135,10 +3544,10 @@ class OpenCapPro(QMainWindow):
         
         if success:
             self.log_box.append(f">>> SUCCESS: {message}")
-            QMessageBox.information(self, "Calibration Done", message)
+            QMessageBox.information(self, Lang.get('calib_done'), message)
         else:
             self.log_box.append(f">>> ERROR: {message}")
-            QMessageBox.critical(self, "Calibration Failed", f"Error: {message}")
+            QMessageBox.critical(self, Lang.get('calib_failed'), f"Error: {message}")
 
     def _execute_intrinsics_thread(self, func, session_name):
         try:
@@ -3186,7 +3595,7 @@ class OpenCapPro(QMainWindow):
 
         # Hard stop if they click Kinematics but haven't run any Pose estimation
         if step == "kinematics" and not valid_pose_tags:
-            QMessageBox.warning(self, "No Pose Data", "No processed pose data found in this session.\n\nPlease run '3. Run Pose' first.")
+            QMessageBox.warning(self, Lang.get('no_pose_data'), Lang.get('no_pose_data_prompt'))
             return
         # ---------------------------------------------
 
@@ -3196,6 +3605,24 @@ class OpenCapPro(QMainWindow):
             return
             
         config = dlg.get_data()
+        
+        # --- NEW: High-Resolution Warning ---
+        if config.get("pose_estimator") == "openpose" and config.get("res") == "1x736":
+            reply = QMessageBox.question(
+                self,
+                "Performance Warning",
+                "Processing with OpenPose at 1x736 resolution is highly memory-intensive.\n\n"
+                "If the video contains a large amount of vertical background clutter (tables, chairs, tripods), "
+                "the algorithm may experience combinatorial explosion, massively increasing processing time.\n\n"
+                "Do you wish to proceed?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.No:
+                self.log_box.append(">>> Pipeline cancelled by user (Resolution Warning).")
+                return
+        # ------------------------------------
         
         self.current_pipeline_config = {
             "session": session,
@@ -3230,13 +3657,15 @@ class OpenCapPro(QMainWindow):
         
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)
-        self.progress_label.setText("Processing with stable backend...")
+        self.progress_label.setText(Lang.get('proc_stable_backend'))
         
         self.process.start(sys.executable, script_args)
+        self.btn_cancel_process.setVisible(True) # Show the kill switch
 
     def _process_finished(self, exit_code, exit_status):
         self.progress_bar.setVisible(False)
-        self.progress_label.setText("Idle")
+        self.progress_label.setText(Lang.get('idle'))
+        self.btn_cancel_process.setVisible(False) # Hide the kill switch
 
         if exit_code == 5:
             self.log_box.append("\n>>> INTERRUPT: Multiple subjects detected.")
@@ -3256,14 +3685,14 @@ class OpenCapPro(QMainWindow):
         
         track_file = session_dir / "temp_tracking_data.json"
         if not track_file.exists():
-            QMessageBox.critical(self, "Error", "Pipeline requested review but tracking data is missing.")
+            QMessageBox.critical(self, Lang.get('error'), Lang.get('track_data_missing'))
             return
 
         with open(track_file) as f: meta = json.load(f)
         video_path = meta.get('video_path', '')
         
         if not os.path.exists(video_path):
-             QMessageBox.warning(self, "Video Missing", f"Could not find video for review:\n{video_path}")
+             QMessageBox.warning(self, Lang.get('vid_missing'), f"Could not find video for review:\n{video_path}")
              return
 
         selector = SubjectSelectorDialog(self, video_path, str(track_file))
@@ -3298,7 +3727,7 @@ class OpenCapPro(QMainWindow):
         session_path = self.data_dir / data['name']
         
         if session_path.exists():
-            QMessageBox.warning(self, "Session Exists", f"Session '{data['name']}' already exists.")
+            QMessageBox.warning(self, Lang.get('session_exists'), f"Session '{data['name']}' already exists.")
             return
         
         try:
@@ -3379,7 +3808,7 @@ class OpenCapPro(QMainWindow):
             self._update_status(f"Created session: {data['name']}", success=True)
             
         except Exception as e:
-            logger.error(f"Error creating session: {e}", exc_info=True)
+            QMessageBox.critical(self, Lang.get('creation_failed'), f"Error: {str(e)}")
             QMessageBox.critical(self, "Creation Failed", f"Error: {str(e)}")
     
     # -------------------------------------------------------------------------
@@ -3450,7 +3879,7 @@ class OpenCapPro(QMainWindow):
         """Show about dialog"""
         QMessageBox.about(
             self,
-            "About OpenCap Offline",
+            Lang.get('about_title'),
             "<h3>OpenCap Offline</h3>"
             f"<p><b>Version:</b> {self.current_version}</p>"
             "<p>A comprehensive motion capture processing launcher.</p>"
@@ -3476,9 +3905,8 @@ class OpenCapPro(QMainWindow):
                 latest_version = response.json().get("tag_name")
                 
                 if latest_version and latest_version != self.current_version:
-                    # An update is available
                     msg = QMessageBox(self)
-                    msg.setWindowTitle("Update Available")
+                    msg.setWindowTitle(Lang.get('update_avail'))
                     msg.setIcon(QMessageBox.Information)
                     msg.setText(f"A new version of OpenCap Offline (<b>{latest_version}</b>) is available!")
                     msg.setInformativeText("Would you like to download it now?")
@@ -3493,21 +3921,19 @@ class OpenCapPro(QMainWindow):
                         # Opens the user's default web browser to your GitHub
                         QDesktopServices.openUrl(QUrl(self.github_releases_url))
                 else:
-                    # They are on the latest version
                     QMessageBox.information(
                         self, 
-                        "Up to Date", 
+                        Lang.get('up_to_date'), 
                         f"You are currently running the latest version ({self.current_version})."
                     )
             else:
-                QMessageBox.warning(self, "Error", "Could not check for updates. The GitHub API might be rate-limiting.")
+                QMessageBox.warning(self, Lang.get('error'), Lang.get('api_error'))
                 
         except requests.exceptions.RequestException:
-            # Handles lack of internet connection
             QMessageBox.warning(
                 self, 
-                "Connection Error", 
-                "Could not connect to GitHub. Please check your internet connection."
+                Lang.get('error'), 
+                Lang.get('conn_error')
             )
     
     # -------------------------------------------------------------------------
@@ -3524,27 +3950,22 @@ class OpenCapPro(QMainWindow):
             
         menu = QMenu()
         
-        # --- NEW RENAME ACTION ---
-        rename_action = QAction("Rename File", self)
+        rename_action = QAction(Lang.get('rename_file'), self)
         rename_action.triggered.connect(lambda: self._rename_tree_file(data["path"]))
         menu.addAction(rename_action)
         
-        # --- EXISTING DELETE ACTION ---
-        delete_action = QAction("Delete File", self)
+        delete_action = QAction(Lang.get('delete_file'), self)
         delete_action.triggered.connect(lambda: self._delete_tree_file(data["path"]))
         menu.addAction(delete_action)
         
         menu.exec_(self.tree.viewport().mapToGlobal(position))
 
     def _delete_tree_file(self, file_path):
-        """Deletes the file from the hard drive and updates the GUI."""
         file_name = os.path.basename(file_path)
-        
-        # 1. Ask for confirmation before destroying data
         reply = QMessageBox.question(
             self, 
-            "Confirm Delete", 
-            f"Are you sure you want to permanently delete this file?\n\n{file_name}",
+            Lang.get('confirm_delete'), 
+            f"{Lang.get('delete_prompt')}\n\n{file_name}",
             QMessageBox.Yes | QMessageBox.No, 
             QMessageBox.No
         )
@@ -3582,8 +4003,8 @@ class OpenCapPro(QMainWindow):
         
         new_name, ok = QInputDialog.getText(
             self, 
-            "Rename File", 
-            "Enter new file name (including extension):", 
+            Lang.get('rename_title'), 
+            Lang.get('rename_prompt'), 
             QLineEdit.Normal, 
             old_name
         )
@@ -3592,7 +4013,7 @@ class OpenCapPro(QMainWindow):
             new_path = old_path.parent / new_name
             
             if new_path.exists():
-                QMessageBox.warning(self, "Error", "A file with that name already exists in this folder.")
+                QMessageBox.warning(self, Lang.get('error'), Lang.get('file_exists'))
                 return
                 
             try:
@@ -3624,9 +4045,8 @@ class OpenCapPro(QMainWindow):
         if self.process and self.process.state() == QProcess.Running:
             reply = QMessageBox.question(
                 self,
-                'Process Running',
-                'A pipeline process is still running.\n\n'
-                'Quit anyway? The process will be terminated.',
+                Lang.get('process_running'),
+                Lang.get('process_running_prompt'),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No
             )
