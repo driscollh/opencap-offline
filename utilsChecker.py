@@ -803,7 +803,7 @@ def findClosestBox(bbox,keyBoxes,imageSize,iPerson=None):
     # Parameters.
     # Proportion of mean image dimensions that corners must change to be
     # considered different person
-    cornerChangeThreshold = 0.2 
+    cornerChangeThreshold = 0.5 
     
     keyBoxCorners = []
     for keyBox in keyBoxes:
@@ -886,8 +886,8 @@ def trackKeypointBox(videoPath,bbStart,allPeople,allBoxes,dataOut,frameStart = 0
                 print('{}: not same person at {}'.format(camName, frameNum - frameIncrement*badFramesBeforeStop))
                 # Replace the data from the badFrames with zeros
                 if len(badFrames) > 1:
-                    dataOut[badFrames,:] = np.zeros(len(badFrames),dataOut.shape[0])
-                break     
+                    dataOut[badFrames,:] = 0
+                break    
             else:
                 badFrames.append(frameNum)
                 
@@ -1297,15 +1297,21 @@ def triangulateMultiviewVideo(CameraParamDict,keypointDict,imageScaleFactor=1,
         
         nZeroConf = (len(includedMkrs) - 
                      np.count_nonzero(confidence3D[:,includedMkrs,:],axis=1))        
-        if not True in (nZeroConf<1).flatten():
+        
+        # RELAXED THRESHOLD: Allow up to 10 occluded markers before truncating the trial
+        tolerance = 10 
+        
+        if not True in (nZeroConf < tolerance).flatten():
             points3D = np.zeros((3,25,10))
             confidence3D = np.zeros((1,25,10))
             startInd = 0
             endInd = confidence3D.shape[2]
             
         else:            
-            startInd = np.argwhere(nZeroConf<1)[0,1]
-            endInd = confidence3D.shape[2] - np.argwhere(np.flip(nZeroConf<1))[0,1]
+            startInd = np.argwhere(nZeroConf < tolerance)[0,1]
+            endInd = confidence3D.shape[2] - np.argwhere(np.flip(nZeroConf < tolerance))[0,1]
+
+            print(f"   > [DEBUG - 3D TRIMMING] Triangulation had {confidence3D.shape[2]} frames. Trimming to Start: {startInd}, End: {endInd}")
             
             # If there were less than 3 cameras, then we also take into account the
             # inleading and exiting nans, which result in garbage interpolated
@@ -1641,13 +1647,15 @@ def loadPklVideo(pklPath, videoFullPath, imageBasedTracker=False, poseDetector='
             res = trackKeypointBox(videoFullPath , startBb , allPeople ,
                                    bbFromKeypoints , res , frameStart = startFrame, 
                                    frameIncrement = -1 , visualize=False, 
-                                   poseDetector=poseDetector)
+                                   poseDetector=poseDetector,
+                                   badFramesBeforeStop=60)
             
             # track this bounding box forward until it can't be tracked            
             res = trackKeypointBox(videoFullPath , startBb , allPeople , 
                                    bbFromKeypoints , res , frameStart = startFrame, 
                                    frameIncrement = 1 , visualize=False, 
-                                   poseDetector=poseDetector)
+                                   poseDetector=poseDetector,
+                                   badFramesBeforeStop=60)
     else:
         res = allPeople[0]
 
@@ -1659,6 +1667,8 @@ def loadPklVideo(pklPath, videoFullPath, imageBasedTracker=False, poseDetector='
         
     # replace confidence nans with 0. 0 isn't used at all, nan is splined and used
     confidence = np.nan_to_num(confidence,nan=0)
+
+    print(f"   > [DEBUG - 2D TRACKING] {videoFullPath[-20:]} outputting {key2D.shape[1]} frames.")
         
     return key2D, confidence
 

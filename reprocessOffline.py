@@ -14,7 +14,7 @@ import argparse
 import traceback
 import generate_intrinsics
 
-from utilsTracking import generate_tracking_data, purge_excluded_subjects
+from utilsTracking import generate_tracking_data, purge_excluded_subjects, render_purged_video
 
 # --- DYNAMIC CONFIGURATION (Argparse for GUI Inputs) -----------------------
 def get_args():
@@ -434,8 +434,7 @@ def run_openpose_direct(session_path, trial_name, pose_folder_name):
             '--display', '0', 
             '--render_pose', '1', 
             '--write_video', video_out_path,
-            '--num_gpu_start', str(OPENPOSE_GPU_START),
-            '--number_people_max', '1'
+            '--num_gpu_start', str(OPENPOSE_GPU_START)
         ]
 
         # Safely extract the resolution string by stripping the prefix
@@ -589,22 +588,49 @@ def run_offline_pipeline():
                     else:
                         run_rtmpose_direct(session_path, trial['name'], args.gpu_index, rtm_model_type, pose_folder_name)
                 
-                # --- NEW: TRACKING AND PURGING LOGIC ---
-                if args.exclusion_file and os.path.exists(args.exclusion_file):
-                    # We are resuming from the UI: Purge the excluded subjects
-                    purge_excluded_subjects(session_path, pose_folder_name, trial['name'], args.exclusion_file)
+                # --- NEW: TRIAL-SPECIFIC TRACKING AND PURGING LOGIC ---
+                exclusion_file = os.path.join(session_path, f"exclusion_{trial['name']}.json")
+                
+                if os.path.exists(exclusion_file):
+                    # Only purge if THIS SPECIFIC TRIAL has an exclusion file saved
+                    print(f"    [SYSTEM] Found exclusion list for {trial['name']}, purging subjects...")
+                    purge_excluded_subjects(session_path, pose_folder_name, trial['name'], exclusion_file)
+                    
+                    # Prevent OpenPose skeleton from overwriting RTMPose video
+                    if args.pose_estimator == "openpose":
+                        render_purged_video(session_path, pose_folder_name, trial['name'])
+                    else:
+                        print(f"    [RENDERER] Preserving native RTMPose video overlay.")
                 else:
-                    # Initial run: Generate tracking data and assess if an interrupt is required
-                    cam0_json_dir = os.path.join(session_path, 'Videos', 'Cam0', f'OutputJsons_{pose_folder_name}', trial['name'])
-                    cam0_vid_path = os.path.join(session_path, 'Videos', 'Cam0', 'InputMedia', trial['name'], f"{trial['name']}.mp4")
+                    # --- CAMERA-INDEPENDENT TRACKING AND PURGING ---
                     tracking_json_path = os.path.join(session_path, "temp_tracking_data.json")
+                
+                    for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
+                        cam_name = os.path.basename(cf)
+                        cam_json_dir = os.path.join(cf, f'OutputJsons_{pose_folder_name}', trial['name'])
+                        cam_vid_path = os.path.join(cf, 'InputMedia', trial['name'], f"{trial['name']}.mp4")
                     
-                    print(f"    [SYSTEM] Executing spatial tracker to verify subject count...")
-                    multiple_subjects_found = generate_tracking_data(cam0_json_dir, cam0_vid_path, tracking_json_path)
+                        if not os.path.exists(cam_json_dir):
+                            continue
+                        
+                        # Check for the exclusion file inside the camera's subfolder
+                        exclusion_file = os.path.join(cf, f"exclusion_{trial['name']}.json")
                     
-                    if multiple_subjects_found:
-                        print(f"    [INTERRUPT] Multiple subjects detected in {trial['name']}. Pausing for manual review.")
-                        sys.exit(5) # Triggers the SubjectSelectorDialog in the GUI
+                        if os.path.exists(exclusion_file):
+                            print(f"    [SYSTEM] Found exclusion list for {cam_name}, purging subjects...")
+                            purge_excluded_subjects(cf, pose_folder_name, trial['name'], exclusion_file)
+                            
+                            # Prevent OpenPose skeleton from overwriting RTMPose video
+                            if args.pose_estimator == "openpose":
+                                render_purged_video(cf, pose_folder_name, trial['name'])
+                            else:
+                                print(f"    [RENDERER] Preserving native RTMPose video overlay for {cam_name}.")
+                        else:
+                            # 2. Check if THIS specific camera needs manual review
+                            print(f"    [SYSTEM] Executing spatial tracker for {cam_name}...")
+                            if generate_tracking_data(cam_json_dir, cam_vid_path, tracking_json_path, cam_name, trial['name']):
+                                print(f"    [INTERRUPT] Multiple subjects detected in {cam_name}. Pausing for manual review.")
+                                sys.exit(5)
                 # ---------------------------------------
 
                 is_static_trial = (trial['type'] == 'static' or trial['name'].lower() == 'neutral')

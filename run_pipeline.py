@@ -335,8 +335,7 @@ def run_openpose_direct(session_path, trial_name, res_override, gpu_start_idx):
         cmd = [
             bin_path, '--video', input_vid, '--write_json', json_out, 
             '--display', '0', '--render_pose', '1', '--write_video', video_out_path, 
-            '--num_gpu', '1', '--num_gpu_start', str(gpu_start_idx),
-            '--number_people_max', '1'
+            '--num_gpu', '1', '--num_gpu_start', str(gpu_start_idx)
         ]
         if res_override != 'default':
             base_res = res_override.split('_')[0]

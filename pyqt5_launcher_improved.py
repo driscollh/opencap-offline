@@ -1099,8 +1099,13 @@ class SubjectSelectorDialog(QDialog):
         self.video_label = QLabel()
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setStyleSheet("background-color: black; border: 1px solid #444;")
-        self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        layout.addWidget(self.video_label)
+        
+        # Use Ignored to break the sizeHint feedback loop, allowing manual user window scaling
+        self.video_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.video_label.setMinimumSize(400, 300)
+        
+        # The '1' stretch factor ensures the video absorbs all the extra window space when resized
+        layout.addWidget(self.video_label, 1)
 
         # 2. Timeline
         simple_tracks = {}
@@ -1214,12 +1219,15 @@ class SubjectSelectorDialog(QDialog):
             for det in self.tracks[idx]:
                 uid = det['id']
                 bbox = det['bbox'] # [x, y, w, h]
-                color = TRACK_COLORS[uid % len(TRACK_COLORS)]
+                color_rgb = TRACK_COLORS[uid % len(TRACK_COLORS)]
+                
+                # --- FIX: Convert RGB to BGR for OpenCV ---
+                color_bgr = (color_rgb[2], color_rgb[1], color_rgb[0])
                 
                 x, y, w, h = [int(v) for v in bbox]
-                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
+                cv2.rectangle(frame, (x, y), (x+w, y+h), color_bgr, 3)
                 cv2.putText(frame, f"ID {uid}", (x, y-10), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, color_bgr, 2)
 
         # Convert to Qt
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -1228,6 +1236,11 @@ class SubjectSelectorDialog(QDialog):
         qimg = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
         pix = QPixmap.fromImage(qimg)
         
+        # Dynamically scale to the label's exact current size
+        self.video_label.setPixmap(pix.scaled(
+            self.video_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        ))
+        
         # Reference parent window boundaries to prevent layout feedback loops
         target_width = max(400, self.width() - 40)
         target_height = max(300, self.height() - 320) # Reserve vertical space for timeline controls
@@ -1235,6 +1248,12 @@ class SubjectSelectorDialog(QDialog):
         self.video_label.setPixmap(pix.scaled(
             target_width, target_height, Qt.KeepAspectRatio, Qt.SmoothTransformation
         ))
+
+    def resizeEvent(self, event):
+        """Re-render the current frame dynamically when the user resizes the window."""
+        super().resizeEvent(event)
+        if self.cap and not self.playing:
+            self.show_frame(self.current_frame)
 
     def confirm_selection(self):
         # Identify unchecked IDs
@@ -1534,6 +1553,127 @@ class DualVideoPlayer(QWidget):
         super().resizeEvent(event)
         if self.total_frames > 0:
             self.show_frame(self.current_frame)
+
+class SyncViewerDialog(QDialog):
+    """A completely separate pop-up window to play all overlay videos side-by-side."""
+    def __init__(self, parent, video_paths):
+        super().__init__(parent)
+        self.setWindowTitle("Multi-Camera Synchronized Playback Check")
+        # Dynamically size the window based on how many cameras there are
+        self.resize(400 * len(video_paths), 400)
+        self.video_paths = video_paths
+        
+        self._init_ui()
+        self._load_videos()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+
+        self.status_lbl = QLabel("Buffering videos to RAM...")
+        self.status_lbl.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_lbl)
+
+        # Video Grid
+        self.video_layout = QHBoxLayout()
+        self.video_labels = []
+        
+        for path in self.video_paths:
+            # Extract "Cam0", "Cam1", etc. from the path for the label
+            cam_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(path))))
+            
+            lbl = QLabel(f"Loading {cam_name}...")
+            lbl.setAlignment(Qt.AlignCenter)
+            lbl.setStyleSheet("background-color: black; color: white; border: 1px solid #444;")
+            lbl.setMinimumSize(300, 300)
+            lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            self.video_labels.append(lbl)
+            self.video_layout.addWidget(lbl)
+            
+        layout.addLayout(self.video_layout)
+
+        # Playback Controls
+        ctrl_layout = QHBoxLayout()
+        self.btn_play = QPushButton("▶")
+        self.btn_play.setEnabled(False)
+        self.btn_play.clicked.connect(self.toggle_play)
+        ctrl_layout.addWidget(self.btn_play)
+
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setEnabled(False)
+        self.slider.valueChanged.connect(self.seek)
+        ctrl_layout.addWidget(self.slider)
+
+        layout.addLayout(ctrl_layout)
+
+        # Playback State
+        self.loaders = []
+        self.caches = [[] for _ in self.video_paths]
+        self.loaded_count = 0
+        self.total_frames = 0
+        self.current_frame = 0
+        self.playing = False
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._timer_tick)
+
+    def _load_videos(self):
+        for i, vp in enumerate(self.video_paths):
+            loader = VideoLoader(vp, max_resolution=600)
+            loader.finished.connect(lambda frames, path, idx=i: self._on_video_loaded(idx, frames))
+            self.loaders.append(loader)
+            loader.start()
+
+    def _on_video_loaded(self, idx, frames):
+        self.caches[idx] = [QPixmap.fromImage(img) for img in frames]
+        self.loaded_count += 1
+
+        if self.loaded_count == len(self.video_paths):
+            self.total_frames = min([len(c) for c in self.caches if c])
+            self.slider.setRange(0, max(0, self.total_frames - 1))
+            self.status_lbl.hide()
+            self.btn_play.setEnabled(True)
+            self.slider.setEnabled(True)
+            self.show_frame(0)
+
+    def show_frame(self, frame_idx):
+        self.current_frame = frame_idx
+        for i, cache in enumerate(self.caches):
+            if frame_idx < len(cache):
+                pix = cache[frame_idx].scaled(self.video_labels[i].size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.video_labels[i].setPixmap(pix)
+
+    def toggle_play(self):
+        self.playing = not self.playing
+        if self.playing:
+            self.btn_play.setText("||")
+            self.timer.start(33)
+        else:
+            self.btn_play.setText("▶")
+            self.timer.stop()
+
+    def _timer_tick(self):
+        if self.total_frames == 0: return
+        next_frame = (self.current_frame + 1) % self.total_frames
+        self.slider.blockSignals(True)
+        self.slider.setValue(next_frame)
+        self.slider.blockSignals(False)
+        self.show_frame(next_frame)
+
+    def seek(self, val):
+        self.show_frame(val)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.total_frames > 0:
+            self.show_frame(self.current_frame)
+
+    def closeEvent(self, event):
+        self.playing = False
+        self.timer.stop()
+        for loader in self.loaders:
+            if loader.isRunning():
+                loader.cancel()
+                loader.wait()
+        super().closeEvent(event)
 
 class SkeletonViewer3D(QtInteractor):
     def __init__(self, parent=None):
@@ -2340,7 +2480,7 @@ class OpenCapPro(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.current_version = "v2.2.1"
+        self.current_version = "v2.2.2"
         self.github_releases_url = "https://github.com/driscollh/opencap-offline/releases/latest"
         
         # Initialize paths
@@ -2417,6 +2557,30 @@ class OpenCapPro(QMainWindow):
                 self.progress_bar.setVisible(False)
                 self.btn_cancel_process.setVisible(False)
                 self.progress_label.setText(Lang.get('aborted_user'))
+
+    def _launch_sync_viewer(self):
+        session_name = self.session_combo.currentText()
+        if not session_name or not hasattr(self, 'current_sync_trial'): return
+
+        trial_name = self.current_sync_trial
+        pose_folder = self.current_sync_pose
+
+        video_paths = []
+        vid_dir = self.data_dir / session_name / "Videos"
+        
+        # Hunt down the overlay video for this specific trial in every camera folder
+        for cam_dir in sorted(vid_dir.glob("Cam*")):
+            overlay_vid = cam_dir / f"OutputMedia_{pose_folder}" / trial_name / f"{trial_name}_overlay.avi"
+            if overlay_vid.exists():
+                video_paths.append(str(overlay_vid))
+
+        if len(video_paths) < 2:
+            QMessageBox.warning(self, Lang.get('warning'), "Not enough overlay videos found to compare synchronization.")
+            return
+
+        # Spawn the completely separate pop-up window
+        dlg = SyncViewerDialog(self, video_paths)
+        dlg.exec_()
 
     def _toggle_calibration_view(self, checked):
         """Passes the current session path down to the 3D viewer to draw the cameras."""
@@ -3013,6 +3177,13 @@ class OpenCapPro(QMainWindow):
         self.video_player = DualVideoPlayer()
         self.video_player.frame_changed.connect(self.skeleton_viewer.update_frame)
         video_layout.addWidget(self.video_player)
+
+        self.btn_sync_check = QPushButton("Check Camera Synchronization")
+        self.btn_sync_check.setObjectName("AccentButton")
+        self.btn_sync_check.setEnabled(False) # Locked until a trial is clicked
+        self.btn_sync_check.clicked.connect(self._launch_sync_viewer)
+        video_layout.addWidget(self.btn_sync_check)
+
         self.splitter.addWidget(self.video_container)
         
         # The splitter will still use these as the default starting sizes
@@ -3368,6 +3539,17 @@ class OpenCapPro(QMainWindow):
             self.video_player.show_frame(0)
             
         self._update_status("Media loaded successfully.", success=True)
+
+        # --- NEW: Unlock the Sync Check button for the clicked trial ---
+        self.btn_sync_check.setEnabled(False)
+        if trc_path or overlay_path:
+            # Extract the trial name and pose folder from the clicked path
+            path_obj = Path(overlay_path if overlay_path else trc_path)
+            self.current_sync_trial = path_obj.parent.name
+            self.current_sync_pose = path_obj.parent.parent.name.replace("OutputMedia_", "").replace("MarkerData_", "")
+            
+            self.btn_sync_check.setEnabled(True)
+            self.btn_sync_check.setText(f"Check Sync: {self.current_sync_trial}")
     
     # -------------------------------------------------------------------------
     # TRIAL IMPORT
@@ -3647,10 +3829,6 @@ class OpenCapPro(QMainWindow):
             "--pose_estimator", config.get("pose_estimator", "openpose").lower(), 
             "--trials"
         ] + config["trials"]
-        
-        # --- NEW: Append the exclusion file flag if resuming ---
-        if resume_file:
-            script_args.extend(["--exclusion_file", resume_file])
             
         self.log_box.clear()
         self.log_box.append(f">>> Executing {config.get('pose_estimator').upper()}: {' '.join(script_args)}")
@@ -3690,6 +3868,8 @@ class OpenCapPro(QMainWindow):
 
         with open(track_file) as f: meta = json.load(f)
         video_path = meta.get('video_path', '')
+        trial_name = meta.get('trial_name', 'unknown')
+        cam_name = meta.get('cam_name', 'unknown') # Pull specific camera name
         
         if not os.path.exists(video_path):
              QMessageBox.warning(self, Lang.get('vid_missing'), f"Could not find video for review:\n{video_path}")
@@ -3697,18 +3877,19 @@ class OpenCapPro(QMainWindow):
 
         selector = SubjectSelectorDialog(self, video_path, str(track_file))
         if selector.exec_() == QDialog.Accepted and selector.selection_made:
-            exclusion_file = session_dir / "exclusion_list.json"
+            # --- FIX: Save exclusion file directly inside the specific camera's folder ---
+            cam_dir = session_dir / "Videos" / cam_name
+            exclusion_file = cam_dir / f"exclusion_{trial_name}.json"
+            
             with open(exclusion_file, 'w') as f:
                 json.dump({"exclude_ids": selector.excluded_ids}, f)
             
-            self.log_box.append(f"\n>>> Resuming pipeline. Excluding IDs: {selector.excluded_ids}")
+            self.log_box.append(f"\n>>> Resuming pipeline. Excluding IDs for {trial_name} ({cam_name}): {selector.excluded_ids}")
             
-            # Resume WITH the correct step
             current_step = self.current_pipeline_config.get("step", "all")
             self._start_pipeline_process(
                 session, 
                 self.current_pipeline_config['args'], 
-                resume_file=str(exclusion_file),
                 step=current_step
             )
         else:
