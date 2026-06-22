@@ -66,7 +66,7 @@ This project is built upon the original open-source OpenCap project by the Stanf
 If you use OpenCap Offline in your research or clinical workflow, please cite it using the following DOI:
 
 **APA:**
-> Driscoll, H. G. (2026). OpenCap Offline (Version 2.2.2) [Computer software]. https://doi.org/10.5281/zenodo.19562446
+> Driscoll, H. G. (2026). OpenCap Offline (Version 2.2.2) [Computer software]. https://doi.org/10.5281/zenodo.20621570
 
 **BibTeX:**
 ```bibtex
@@ -77,7 +77,7 @@ If you use OpenCap Offline in your research or clinical workflow, please cite it
   year         = 2026,
   publisher    = {Zenodo},
   version      = {2.2.2},
-  doi          = {10.5281/zenodo.19562446},
-  url          = {[https://doi.org/10.5281/zenodo.19562446](https://doi.org/10.5281/zenodo.19562446)}
+  doi          = {10.5281/zenodo.20621570},
+  url          = {[https://doi.org/10.5281/zenodo.20621570](https://doi.org/10.5281/zenodo.20621570)}
 }
   
