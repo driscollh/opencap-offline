@@ -22,6 +22,7 @@ import yaml
 import logging
 import re
 import requests
+import html
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any
 from enum import Enum
@@ -1269,10 +1270,6 @@ class SubjectSelectorDialog(QDialog):
         if self.cap: self.cap.release()
         super().closeEvent(event)
 
-    def closeEvent(self, event):
-        if self.cap: self.cap.release()
-        super().closeEvent(event)
-
     def _get_gpu_info(self) -> Dict[str, str]:
         """
         Query available GPUs using nvidia-smi.
@@ -1479,16 +1476,6 @@ class DualVideoPlayer(QWidget):
             
             # Clean up threads
             self.loaders = []
-
-    def resizeEvent(self, event):
-        """Dynamic scaling logic to maintain 9:16 aspect ratio on resize."""
-        super().resizeEvent(event)
-        self._update_display()
-
-    def _update_display(self):
-        """Re-renders the current frame to fit the new widget size."""
-        if self.current_frame < len(self.raw_cache):
-            self.show_frame(self.current_frame)
 
     def show_frame(self, idx: int) -> None:
         if self.total_frames == 0: return
@@ -2640,7 +2627,7 @@ class OpenCapPro(QMainWindow):
                 
             # 3. Standard Output (FFmpeg, OpenPose, OpenSim logs)
             else:
-                self.log_box.append(line)
+                self.log_box.append(f"<span>{html.escape(line)}</span>")
                 
         # Auto-scroll the log box to the bottom so you can see the latest output
         scrollbar = self.log_box.verticalScrollBar()
@@ -2690,36 +2677,6 @@ class OpenCapPro(QMainWindow):
         
         # FIX: Allow window to be resized in both directions
         self.setMinimumSize(1200, 800) 
-
-    def _process_finished(self, exit_code, exit_status):
-        self.progress_bar.setVisible(False)
-        self.progress_label.setText("Idle")
-
-        if exit_code == 5:
-            self.log_box.append("\n>>> INTERRUPT: Multiple subjects detected.")
-            self._handle_subject_selection()
-            return
-
-        if exit_code == 0:
-            self.log_box.append("\n>>> SUCCESS: Pipeline Finished.")
-            
-            # --- NEW: Show Calibration Images ---
-            current_step = self.current_pipeline_config.get("step", "all")
-            if current_step in ["calibrate", "all"]:
-                self.show_calib_cb.setEnabled(True)
-                session = self.current_pipeline_config['session']
-                calib_dir = self.data_dir / session / "CalibrationImages"
-                
-                # Only show dialog if images were actually generated
-                if calib_dir.exists() and any(calib_dir.iterdir()):
-                    dlg = CalibrationReviewDialog(self, self.data_dir / session)
-                    dlg.exec_()
-                else:
-                    QMessageBox.information(self, Lang.get('success'), Lang.get('proc_complete'))
-            else:
-                QMessageBox.information(self, Lang.get('success'), Lang.get('proc_complete'))
-        else:
-            self.log_box.append(f"\n>>> ERROR: Failed with code {exit_code}")
 
     def _create_log_area_content(self):
         """Refactored Log Area to live inside the Vertical Splitter"""
@@ -3852,7 +3809,23 @@ class OpenCapPro(QMainWindow):
 
         if exit_code == 0:
             self.log_box.append("\n>>> SUCCESS: Pipeline Finished.")
-            QMessageBox.information(self, "Success", "Processing Complete!")
+
+            # --- NEW: Show Calibration Images ---
+            current_step = self.current_pipeline_config.get("step", "all")
+            if current_step in ["calibrate", "all"]:
+                self.show_calib_cb.setEnabled(True)
+                session = self.current_pipeline_config['session']
+                calib_dir = self.data_dir / session / "CalibrationImages"
+                
+                # Only show dialog if images were actually generated
+                if calib_dir.exists() and any(calib_dir.iterdir()):
+                    dlg = CalibrationReviewDialog(self, self.data_dir / session)
+                    dlg.exec_()
+                else:
+                    QMessageBox.information(self, Lang.get('success'), Lang.get('proc_complete'))
+            else:
+                QMessageBox.information(self, Lang.get('success'), Lang.get('proc_complete'))
+
         else:
             self.log_box.append(f"\n>>> ERROR: Failed with code {exit_code}")
 

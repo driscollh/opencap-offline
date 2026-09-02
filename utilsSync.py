@@ -94,6 +94,7 @@ def synchronizeVideos(CameraDirectories, trialRelativePath, pathPoseDetector,
             
         thisVideo = cv2.VideoCapture(video_to_load)
         frameRate = np.round(thisVideo.get(cv2.CAP_PROP_FPS))
+        thisVideo.release()
         
         if key2D.shape[1] == 0 and confidence.shape[1] == 0:
             print(f"    [WARNING] No valid data found for {camName}. Excluding from sync.")

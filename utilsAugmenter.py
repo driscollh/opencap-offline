@@ -8,7 +8,7 @@ import json
 
 # --- CACHE: Global dictionary to store loaded models ---
 _MODEL_CACHE = {}
-# -----------------------------------------------------
+# -----------------------------------------------------4
 
 def augmentTRC(pathInputTRCFile, subject_mass, subject_height,
                pathOutputTRCFile, augmenterDir, augmenterModelName="LSTM",
@@ -126,53 +126,7 @@ def augmentTRC(pathInputTRCFile, subject_mass, subject_height,
         
         # Predict (verbose=0 suppresses the progress bar)
         if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
-        if inputs.ndim == 2: inputs = np.expand_dims(inputs, axis=0)
         outputs = model.predict(inputs, verbose=2)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
-        if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
         if outputs.ndim == 3: outputs = np.squeeze(outputs, axis=0)
         
         # %% Post-process outputs.

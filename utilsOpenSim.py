@@ -644,9 +644,11 @@ def generateVisualizerJson(modelPath,ikPath,jsonOutputPath,statesInDegrees=True,
             if col[0] == '/': # if full state path
                 temp = col[:col.rfind('/')]
                 coordName = temp[temp.rfind('/')+1:]
+            col_data = stateTable.getDependentColumn(col)
+            is_rotation = (coords.get(coordName).getMotionType() == 1)
             for t in range(len(stateTime)):
-                qTemp = np.asarray(stateTable.getDependentColumn(col)[t])
-                if coords.get(coordName).getMotionType() == 1 and inDegrees: # rotation
+                qTemp = np.asarray(col_data[t])
+                if is_rotation and inDegrees:
                     qTemp = np.deg2rad(qTemp)
                 if 'pelvis_ty' in col and not (vertical_offset is None):
                     qTemp -= (vertical_offset - 0.01)

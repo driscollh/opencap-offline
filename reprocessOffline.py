@@ -414,6 +414,7 @@ def generate_neutral_thumbnails(session_path, trial_name, res_override): # Add r
 def run_openpose_direct(session_path, trial_name, pose_folder_name):
     print(f"\n--- [Step 2/3] Running OpenPose ---")
     bin_path = os.path.join(OPENPOSE_ROOT_DIR, 'bin', 'OpenPoseDemo.exe')
+    failed_cams = []                                        # <-- add
     for cf in sorted(glob.glob(os.path.join(session_path, 'Videos', 'Cam*'))):
         input_vid = os.path.join(cf, 'InputMedia', trial_name, f"{trial_name}.mp4")
         
@@ -455,8 +456,11 @@ def run_openpose_direct(session_path, trial_name, pose_folder_name):
             print(f"    [RUNNING] OpenPose for {os.path.basename(cf)}...")
             subprocess.run(cmd, cwd=OPENPOSE_ROOT_DIR, check=True)
             print(f"    [SAVED] Video: {video_out_path}")
-        except: 
+        except Exception: 
             print(f"   [ERROR] OpenPose Crashed on {os.path.basename(cf)}")
+            failed_cams.append(os.path.basename(cf))
+
+    return not failed_cams
 
 def generate_missing_pickles(session_path, trial_name, pose_folder_name, is_static=False, pose_estimator="openpose"):
     print(f"\n--- [Step 3/3] Helper Files (Source: {pose_estimator.upper()}, Static: {is_static}) ---")
@@ -547,6 +551,7 @@ def run_rtmpose_direct(session_path, trial_name, gpu_id, model_type, pose_folder
 
 def run_offline_pipeline():
     session_path = os.path.join(BASE_DATA_DIR, 'Data', SESSION_NAME)
+    failed_trials = []
 
     # --- NEW UNIFIED NAMING LOGIC ---
     if args.pose_estimator == "openpose":
@@ -584,7 +589,11 @@ def run_offline_pipeline():
                 # Only run the pose estimator if we are NOT resuming from an exclusion list
                 if not args.exclusion_file:
                     if args.pose_estimator == "openpose":
-                        run_openpose_direct(session_path, trial['name'], pose_folder_name)
+                        pose_ok = run_openpose_direct(session_path, trial['name'], pose_folder_name)
+                        if not pose_ok:
+                            print(f"[FAILED] {trial['name']}: OpenPose failed on one or more cameras")
+                            failed_trials.append(trial['name'])
+                            continue          # skip pickle-gen + kinematics for this dead trial
                     else:
                         run_rtmpose_direct(session_path, trial['name'], args.gpu_index, rtm_model_type, pose_folder_name)
                 
@@ -648,7 +657,14 @@ def run_offline_pipeline():
                          resolutionPoseDetection=pose_folder_name, 
                          genericFolderNames=False, bbox_thr=0.8) 
                 except Exception as e:
+                    import traceback
                     print(f"[FAILED] {trial['name']}: {e}")
+                    traceback.print_exc()
+                    failed_trials.append(trial['name'])
+
+        if failed_trials:
+            print(f"%%STATUS: FAILED trials: {', '.join(failed_trials)}")
+            sys.exit(1)
 
 if __name__ == '__main__':
     run_offline_pipeline()

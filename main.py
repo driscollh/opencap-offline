@@ -18,7 +18,6 @@ import numpy as np
 import yaml
 import traceback
 import ffmpeg
-from utilsChecker import calcIntrinsics, video2Images
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -354,7 +353,6 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
                                      pathAugmentedOutputFiles[trialName], os.path.join(baseDir, "MarkerAugmenter"), 
                                      augmenterModelName=augmenterModelName, augmenter_model=augmenterModel, offset=offset)
         if offset:
-            vertical_offset_settings = float(np.copy(vertical_offset)-0.01)
             vertical_offset = 0.01   
         
     if runOpenSimPipeline:
@@ -382,11 +380,3 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
         os.makedirs(os.path.join(vis_json_dir, trialName), exist_ok=True)
         generateVisualizerJson(pathModelIK, pathOutputIK, os.path.join(vis_json_dir, trialName, trialName + '.json'), 
                                vertical_offset=vertical_offset)
-        
-    # %% Rewrite settings, adding offset  
-    if not extrinsicsTrial:
-        # Check if settings exists before trying to write to it
-        if 'settings' in locals() and offset:
-            settings['verticalOffset'] = vertical_offset_settings 
-            with open(pathSettings, 'w') as file:
-                yaml.dump(settings, file)

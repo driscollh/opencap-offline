@@ -85,6 +85,7 @@ def runOpenPoseVideo(cameraDirectory,fileName,pathOpenPose, trialName,
     # Get number of frames.
     thisVideo = cv2.VideoCapture(videoFullPath)
     nFrameIn = int(thisVideo.get(cv2.CAP_PROP_FRAME_COUNT))
+    thisVideo.release()
     
     # The video is rewritten, unrotated, and downsampled. There is no
     # need to do anything specific for the rotation, just rewriting the video
@@ -267,10 +268,6 @@ def runMMposeVideo(
     os.makedirs(pathOutputVideo, exist_ok=True)
     os.makedirs(pathOutputBox, exist_ok=True)
     os.makedirs(pathOutputPkl, exist_ok=True)
-    
-    # Get frame rate.
-    thisVideo = cv2.VideoCapture(videoFullPath)
-    # frameRate = np.round(thisVideo.get(cv2.CAP_PROP_FPS))
     
     # The video is rewritten, unrotated, and downsampled. There is no
     # need to do anything specific for the rotation, just rewriting the video
