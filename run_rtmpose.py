@@ -7,7 +7,6 @@
 # ==============================================================================
 
 import os
-import sys
 import json
 import cv2
 import numpy as np
@@ -18,7 +17,6 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 # OpenMMLab imports
 from mmpose.apis import inference_topdown, init_model as init_pose_estimator
-from mmpose.structures import merge_data_samples
 from mmpose.visualization import PoseLocalVisualizer
 from mmdet.apis import inference_detector, init_detector
 from mmengine.registry import DefaultScope 

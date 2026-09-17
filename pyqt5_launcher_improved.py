@@ -24,7 +24,7 @@ import re
 import requests
 import html
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple, Any
+from typing import Optional, Dict, Tuple, Any
 from enum import Enum
 
 # --- FORCE PYQT5 ---
@@ -40,20 +40,19 @@ from PyQt5.QtWidgets import (
     QComboBox, QPushButton, QTreeWidget, QTreeWidgetItem, QFrame, QSplitter,
     QSlider, QStyle, QFileDialog, QMessageBox, QDialog, QLineEdit, QFormLayout,
     QCheckBox, QScrollArea, QTextEdit, QRadioButton, QButtonGroup, QGridLayout,
-    QSizePolicy, QProgressBar, QShortcut, QMenuBar, QMenu, QAction, QStatusBar,
-    QStackedWidget
+    QSizePolicy, QProgressBar, QShortcut, QMenu, QAction, QStatusBar,
+    QStackedWidget, QTextBrowser, QTabWidget
 )
 from PyQt5.QtCore import (
-    Qt, QTimer, pyqtSignal as Signal, QThread, QSize, QProcess, QSettings,
-    QRunnable, QThreadPool, pyqtSlot, QRect
+    Qt, QTimer, pyqtSignal as Signal, QThread, QProcess, QSettings,
 )
 from PyQt5.QtGui import (
-    QImage, QPixmap, QIcon, QColor, QFont, QPalette, QKeySequence, QPainter, QBrush,
+    QImage, QPixmap, QIcon, QColor, QKeySequence, QPainter, QBrush,
     QDesktopServices
 )
 
 from PyQt5.QtCore import (
-    QDateTime, QUrl
+    QUrl
 )
 
 # --- 3D ENGINE ---
@@ -85,20 +84,15 @@ class Config:
     # UI Dimensions
     WINDOW_WIDTH = 1600
     WINDOW_HEIGHT = 950
-    TREE_WIDTH = 300
-    VIDEO_CONTAINER_WIDTH = 600
     LOG_HEIGHT = 100
     HEADER_HEIGHT = 60
     BUTTON_HEIGHT = 40
     LOGO_MAX_WIDTH = 150
     LOGO_MAX_HEIGHT = 40
     
-    PLAYBACK_FPS = 30
-    MIN_VIDEO_SIZE = (200, 150)
     
     # 3D Visualization Defaults (METERS)
     SKELETON_JOINT_RADIUS = 0.015
-    SKELETON_BONE_RADIUS = 0.008
     
     # --- CHANGED: Larger Grid for full-scale models ---
     GRID_SIZE = 6
@@ -107,9 +101,6 @@ class Config:
     MAX_FRAMES_LOAD = 10000
     
     VIDEO_EXTENSIONS = ('.mp4', '.mov', '.avi')
-    OVERLAY_EXTENSION = ('.avi', '.mp4')
-    MARKER_EXTENSION = '.trc'
-    MESH_EXTENSION = ('.vtp', '.vtk', '.obj', '.stl')
     
     # Default Session Values
     DEFAULT_HEIGHT = 1.75
@@ -184,6 +175,8 @@ class Lang:
             'step_3': '3. 2D Pose Estimation',
             'step_4': '4. 3D Pose and OpenSim',
             'acknowledge_close': 'Acknowledge & Close',
+            'calib_continue': 'Continue - Confirm Calibration',
+            'calib_reject': 'Cancel - Incorrect Calibration',
             'confirm_assign': 'Confirm Assignments',
             'import_trial_down': '▼ IMPORT TRIAL',
             'import_trial_right': '▶ IMPORT TRIAL',
@@ -194,6 +187,7 @@ class Lang:
             'show_calib': 'Show Calibration Setup',
             'browse': 'Browse',
             'clear': 'Clear',
+            'guide_title': 'Setup and Recording Guide',
             
             # Dialogs & Forms
             'create_new_session': 'Create New Session',
@@ -344,6 +338,8 @@ class Lang:
             'step_3': '3. 2D 포즈 추정',
             'step_4': '4. 3D 포즈 및 OpenSim',
             'acknowledge_close': '확인 및 닫기',
+            'calib_continue': 'Continue - Confirm Calibration',
+            'calib_reject': 'Cancel - Incorrect Calibration',
             'confirm_assign': '할당 확인',
             'import_trial_down': '▼ 테스트 가져오기',
             'import_trial_right': '▶ 테스트 가져오기',
@@ -354,6 +350,7 @@ class Lang:
             'show_calib': '캘리브레이션 설정 보기',
             'browse': '찾아보기',
             'clear': '지우기',
+            'guide_title': 'Setup and Recording Guide',
             
             # Dialogs & Forms
             'create_new_session': '새 세션 생성',
@@ -511,6 +508,313 @@ TRACK_COLORS = [
     (255, 255, 0),  # ID 3: Yellow
     (0, 255, 255),  # ID 4: Cyan
     (255, 0, 255)   # ID 5: Magenta
+]
+
+# =========================================================================
+# SETUP GUIDE CONTENT
+# Plain data, separate from the dialog that renders it — edit the text here
+# without touching any UI code. Bodies are simple HTML (headings, bold, lists).
+# Placeholders in [BRACKETS] are for your specific protocol values.
+# =========================================================================
+SETUP_GUIDE_SECTIONS = [
+    {
+        "title": "Using the Software",
+        "body": """
+            <h3>The H-Cap workflow, step by step</h3>
+            <p>Once your videos are recorded, follow this sequence in the app.</p>
+            <ol>
+              <li><b>Create a session</b> &mdash; click <b>+ New Session</b> and
+                  enter the subject details (ID, sex, height, weight, tag) and the
+                  calibration settings: camera type, number of cameras, board
+                  placement, and the checkerboard's <b>rows, columns</b>
+                  (black-to-black corners) and <b>square size</b>.</li>
+
+              <li><b>Import your videos</b> &mdash; in the <b>Import Trial</b>
+                  panel, choose the video type, name it if needed, and click
+                  <b>Execute Import</b>. Import each type for every camera:
+                  <ul>
+                    <li><b>Intrinsics</b> &mdash; the per-camera lens-calibration
+                        video.</li>
+                    <li><b>Calibration</b> &mdash; the checkerboard video used to
+                        locate the cameras (extrinsics).</li>
+                    <li><b>Neutral</b> &mdash; the static standing pose.</li>
+                    <li><b>Dynamic</b> &mdash; each movement trial (e.g. walking).</li>
+                  </ul>
+              </li>
+
+              <li><b>Calibrate the cameras</b> &mdash; run
+                  <b>1. Process Intrinsics</b> (learns each lens), then
+                  <b>2. Calibrate Extrinsics</b> (locates the cameras from the
+                  checkerboard).</li>
+
+              <li><b>Run the pipeline</b> &mdash; click <b>RUN PIPELINE</b> and
+                  choose the GPU, the pose estimator (<b>OpenPose</b> or
+                  <b>RTMPose</b>), the resolution, and which trials to process.
+                  H-Cap then extracts 2D pose, synchronises the cameras,
+                  triangulates to 3D, augments the markers, and computes
+                  kinematics in OpenSim.</li>
+
+              <li><b>Review the calibration</b> &mdash; when prompted after
+                  calibration, check the calibration images. Click <b>Continue</b>
+                  to proceed to pose estimation, or <b>Cancel</b> if the
+                  calibration looks wrong &mdash; this saves you the long pose
+                  stage on a bad setup.</li>
+
+              <li><b>Select the subject if prompted</b> &mdash; if more than one
+                  person is detected, choose which subject to keep.</li>
+
+              <li><b>View the results</b> &mdash; the 3D viewer shows the
+                  reconstructed motion. Load the neutral trial first (it sets the
+                  floor), then load your dynamic trials to inspect them.</li>
+            </ol>
+            <p><b>Order matters:</b> a dynamic trial can only be processed after
+            its session has a neutral trial and valid calibration.</p>
+        """
+    },
+    {
+        "title": "Camera Setup",
+        "body": """
+            <h3>Positioning your cameras</h3>
+            <ul>
+              <li>The <b>rear-facing camera</b> (on the back of the device) is
+                  the one used for recording.</li>
+              <li>Position the cameras to avoid segment occlusions.</li>
+              <li>Avoid having too many people in the background.</li>
+              <li>Avoid having the participant exit and re-enter the capture
+                  volume.</li>
+              <li>At least two cameras must see the <b>whole body at all times</b>
+                  during the movement. Two cameras is sufficient for many tasks,
+                  but tasks where segments get occluded may benefit from an
+                  additional front-facing camera.</li>
+              <li>For a two-camera setup, cameras at <b>30&ndash;45&deg;</b> off
+                  the line facing forward from the participant is typically best.
+                  Pure sagittal (side-on) views do not work well due to limb
+                  occlusion.</li>
+              <li>Before calibration, watch the participant perform the task in
+                  <i>each</i> camera to confirm they stay within the field of
+                  view.</li>
+            </ul>
+        """
+    },
+    {
+        "title": "Calibration",
+        "body": """
+            <h3>Environment</h3>
+            <ul>
+              <li>Record in a well-lit environment.</li>
+              <li>If recording outdoors with direct sun on the checkerboard,
+                  shade it before calibrating.</li>
+            </ul>
+
+            <h3>Checkerboard dimensions</h3>
+            <ul>
+              <li>Use a checkerboard on at least A4 paper with squares at least
+                  <b>35 mm</b>.</li>
+              <li>Verify the square dimensions after printing. If they differ,
+                  record the correct value in the session metadata.</li>
+              <li>Ensure the checkerboard has a <b>white border</b> around all
+                  sides.</li>
+              <li>The rows and columns entered in the metadata are the number of
+                  <b>black-to-black corners</b>, not the number of squares.</li>
+            </ul>
+
+            <h3>Checkerboard position</h3>
+            <ul>
+              <li>The checkerboard must be visible by all cameras.</li>
+              <li>Stand it <b>perpendicular to the ground</b>, with its long edge
+                  parallel to the ground (or perfectly horizontal). Perpendicular
+                  is preferred.</li>
+              <li>Keep it within <b>less than 5 m</b> of the cameras.</li>
+              <li>It should not point straight at any camera &mdash; move it up,
+                  down, left, or right to avoid this.</li>
+              <li>Place it at the centre of your desired capture volume, as close
+                  to the cameras as possible while remaining visible to all.</li>
+            </ul>
+        """
+    },
+    {
+        "title": "Data Collection",
+        "body": """
+            <h3>Recording the movement</h3>
+            <ul>
+              <li><b>Clothing:</b> tight clothing that contrasts with a simple
+                  background, and shoes that contrast with the floor and with the
+                  trousers, is helpful.</li>
+              <li>Start recording at least <b>1 second before</b> the participant
+                  begins the movement.</li>
+              <li>For treadmill gait or fairly static movements (e.g. postural
+                  sway), have the participant <b>punch one hand in the air</b>
+                  above their shoulder and bring it back down at some point
+                  during the trial. This helps camera synchronisation.</li>
+            </ul>
+        """
+    },
+    {
+        "title": "Common Problems",
+        "body": """
+            <h3>Avoiding a failed session</h3>
+            <ul>
+              <li><b>Subject clipped out of frame:</b> check all camera views
+                  before recording &mdash; this is the most common issue.</li>
+              <li><b>Legs swapped / confused:</b> usually a camera too close to
+                  side-on. Keep cameras 30&ndash;45&deg; off front-facing.</li>
+              <li><b>Checkerboard not detected:</b> ensure it is well lit, has a
+                  white border, is within 5 m, and is not pointing straight at a
+                  camera.</li>
+              <li><b>Wrong board dimensions:</b> the metadata rows/columns are
+                  black-to-black corners, not squares.</li>
+              <li><b>Camera moved after calibration:</b> recalibrate &mdash; the
+                  old calibration is no longer valid.</li>
+            </ul>
+        """
+    },
+]
+
+# =========================================================================
+# SETUP GUIDE CONTENT — KOREAN (한국어)
+# Paste this block immediately AFTER the existing SETUP_GUIDE_SECTIONS block.
+# NOTE: first-pass translation — a Korean-speaking clinician should review the
+# clinical/technical terminology before use in the trial.
+# =========================================================================
+SETUP_GUIDE_SECTIONS_KO = [
+    {
+        "title": "사용 방법",
+        "body": """
+            <h3>H-Cap 작업 순서 (단계별)</h3>
+            <p>영상 촬영이 끝나면, 앱에서 아래 순서를 따르십시오.</p>
+            <ol>
+              <li><b>세션 생성</b> &mdash; <b>+ New Session</b>을 클릭하고 대상자
+                  정보(ID, 성별, 키, 몸무게, 태그)와 보정 설정(카메라 종류, 카메라
+                  수, 체커보드 배치, 그리고 체커보드의 <b>행·열</b>(검정-검정
+                  코너 수)과 <b>정사각형 크기</b>)을 입력합니다.</li>
+
+              <li><b>영상 가져오기</b> &mdash; <b>Import Trial</b> 패널에서 영상
+                  종류를 선택하고, 필요하면 이름을 지정한 뒤 <b>Execute Import</b>를
+                  클릭합니다. 모든 카메라에 대해 각 종류를 가져옵니다:
+                  <ul>
+                    <li><b>Intrinsics</b> &mdash; 카메라별 렌즈 보정 영상.</li>
+                    <li><b>Calibration</b> &mdash; 카메라 위치(외부 파라미터)를
+                        찾기 위한 체커보드 영상.</li>
+                    <li><b>Neutral</b> &mdash; 정적 기립 자세.</li>
+                    <li><b>Dynamic</b> &mdash; 각 동작 시행(예: 보행).</li>
+                  </ul>
+              </li>
+
+              <li><b>카메라 보정</b> &mdash; <b>1. Process Intrinsics</b>(각 렌즈를
+                  학습)를 먼저 실행한 뒤, <b>2. Calibrate Extrinsics</b>(체커보드로
+                  카메라 위치를 찾음)를 실행합니다.</li>
+
+              <li><b>파이프라인 실행</b> &mdash; <b>RUN PIPELINE</b>을 클릭하고 GPU,
+                  자세 추정기(<b>OpenPose</b> 또는 <b>RTMPose</b>), 해상도, 처리할
+                  시행을 선택합니다. 그러면 H-Cap이 2D 자세를 추출하고, 카메라를
+                  동기화하며, 3D로 삼각측량하고, 마커를 증강한 뒤 OpenSim에서
+                  운동학을 계산합니다.</li>
+
+              <li><b>보정 검토</b> &mdash; 보정이 끝난 뒤 안내가 나타나면 보정
+                  이미지를 확인합니다. 문제가 없으면 <b>Continue</b>를 눌러 자세
+                  추정으로 진행하고, 보정이 잘못되어 보이면 <b>Cancel</b>을 누릅니다
+                  &mdash; 잘못된 설정에서 긴 자세 추정 단계를 낭비하지 않도록
+                  해줍니다.</li>
+
+              <li><b>대상자 선택(필요 시)</b> &mdash; 두 명 이상이 감지되면 유지할
+                  대상자를 선택합니다.</li>
+
+              <li><b>결과 확인</b> &mdash; 3D 뷰어에 복원된 동작이 표시됩니다. 먼저
+                  Neutral 시행을 불러온 뒤(바닥면을 설정함) Dynamic 시행을 불러와
+                  확인합니다.</li>
+            </ol>
+            <p><b>순서가 중요합니다:</b> Dynamic 시행은 해당 세션에 Neutral 시행과
+            유효한 보정이 있어야만 처리할 수 있습니다.</p>
+        """
+    },
+    {
+        "title": "카메라 설정",
+        "body": """
+            <h3>카메라 배치</h3>
+            <ul>
+              <li>녹화에는 기기 뒷면의 <b>후면 카메라</b>가 사용됩니다.</li>
+              <li>신체 분절이 가려지지 않도록 카메라를 배치하십시오.</li>
+              <li>배경에 사람이 너무 많지 않도록 하십시오.</li>
+              <li>대상자가 촬영 범위를 벗어났다가 다시 들어오지 않도록 하십시오.</li>
+              <li>동작 중 <b>항상 전신</b>이 최소 두 대의 카메라에 보여야 합니다.
+                  많은 과제에는 두 대로 충분하지만, 분절이 가려지는 과제에는 전면
+                  카메라를 추가하면 도움이 될 수 있습니다.</li>
+              <li>두 대 구성에서는 대상자의 정면 방향 축에서 <b>30&ndash;45&deg;</b>
+                  벗어난 위치가 일반적으로 가장 좋습니다. 완전한 시상면(측면) 시야는
+                  사지 가림 때문에 잘 작동하지 않습니다.</li>
+              <li>보정 전에 <i>각</i> 카메라에서 대상자가 과제를 수행하는 모습을
+                  확인하여 시야 안에 계속 머무는지 점검하십시오.</li>
+            </ul>
+        """
+    },
+    {
+        "title": "카메라 보정",
+        "body": """
+            <h3>환경</h3>
+            <ul>
+              <li>조명이 밝은 환경에서 촬영하십시오.</li>
+              <li>야외에서 체커보드에 직사광선이 비치면 보정 전에 그늘을
+                  만들어 주십시오.</li>
+            </ul>
+
+            <h3>체커보드 규격</h3>
+            <ul>
+              <li>최소 A4 용지에 <b>35 mm</b> 이상의 정사각형으로 된 체커보드를
+                  사용하십시오.</li>
+              <li>인쇄 후 정사각형 치수를 확인하십시오. 다르면 세션 메타데이터에
+                  올바른 값을 기록하십시오.</li>
+              <li>체커보드의 모든 변에 <b>흰색 테두리</b>가 있는지 확인하십시오.</li>
+              <li>메타데이터에 입력하는 행·열은 정사각형의 개수가 아니라
+                  <b>검정-검정 코너</b>의 개수입니다.</li>
+            </ul>
+
+            <h3>체커보드 위치</h3>
+            <ul>
+              <li>체커보드는 모든 카메라에서 보여야 합니다.</li>
+              <li>긴 변이 바닥과 평행이 되도록(또는 완전히 수평이 되도록)
+                  <b>바닥에 수직</b>으로 세우십시오. 수직 배치가 권장됩니다.</li>
+              <li>카메라로부터 <b>5 m 이내</b>에 두십시오.</li>
+              <li>어느 카메라도 정면으로 향하지 않게 하십시오 &mdash; 위, 아래,
+                  좌, 우로 옮겨 이를 피하십시오.</li>
+              <li>모든 카메라에서 보이면서 가능한 한 카메라에 가깝게, 원하는 촬영
+                  범위의 중앙에 두십시오.</li>
+            </ul>
+        """
+    },
+    {
+        "title": "데이터 수집",
+        "body": """
+            <h3>동작 녹화</h3>
+            <ul>
+              <li><b>복장:</b> 단순한 배경과 대비되는 몸에 붙는 옷, 그리고 바닥 및
+                  바지와 대비되는 신발이 도움이 됩니다.</li>
+              <li>대상자가 동작을 시작하기 <b>최소 1초 전</b>부터 녹화를
+                  시작하십시오.</li>
+              <li>트레드밀 보행이나 비교적 정적인 동작(예: 자세 동요 평가)의 경우,
+                  시행 중 어느 시점에 대상자가 <b>한 손을 어깨 위로 뻗었다가</b>
+                  내리도록 하십시오. 이는 카메라 동기화에 도움이 됩니다.</li>
+            </ul>
+        """
+    },
+    {
+        "title": "자주 발생하는 문제",
+        "body": """
+            <h3>시행 실패 예방</h3>
+            <ul>
+              <li><b>대상자가 화면 밖으로 잘림:</b> 녹화 전에 모든 카메라 화면을
+                  확인하십시오 &mdash; 가장 흔한 문제입니다.</li>
+              <li><b>좌우 다리 혼동:</b> 보통 카메라가 너무 측면에 가깝기
+                  때문입니다. 카메라를 정면에서 30&ndash;45&deg; 벗어나게
+                  유지하십시오.</li>
+              <li><b>체커보드 미검출:</b> 조명이 밝고, 흰색 테두리가 있으며, 5 m
+                  이내이고, 카메라를 정면으로 향하지 않는지 확인하십시오.</li>
+              <li><b>잘못된 보드 규격:</b> 메타데이터의 행·열은 정사각형이 아니라
+                  검정-검정 코너입니다.</li>
+              <li><b>보정 후 카메라 이동:</b> 다시 보정하십시오 &mdash; 이전 보정은
+                  더 이상 유효하지 않습니다.</li>
+            </ul>
+        """
+    },
 ]
 
 # =============================================================================
@@ -1671,12 +1975,24 @@ class SkeletonViewer3D(QtInteractor):
     def _init_scene(self):
         self.set_background(Colors.BG)
         plane = pv.Plane(i_size=Config.GRID_SIZE, j_size=Config.GRID_SIZE)
-        self.add_mesh(plane, color=Colors.INPUT_BG, opacity=Config.GRID_OPACITY, show_edges=True)
+        self.floor_actor = self.add_mesh(plane, color=Colors.INPUT_BG, opacity=Config.GRID_OPACITY, show_edges=True)
         self.enable_eye_dome_lighting()
     
     def _init_state(self):
         self.skel_actors = {}
         self.markers = None
+        self.floor_z = 0.0
+
+    def apply_session_floor(self, session_path):
+        """Set the visual floor from saved neutral-trial metadata (once per session)."""
+        try:
+            meta_path = os.path.join(str(session_path), "sessionMetadata.yaml")
+            with open(meta_path, 'r') as f:
+                meta = yaml.safe_load(f)
+            self.floor_z = float(meta.get('visualizerFloorOffset', 0.0))
+        except Exception:
+            self.floor_z = 0.0
+        self.floor_actor.SetPosition(0.0, 0.0, self.floor_z)
 
     def load_trc(self, path: str):
         self.clear_skeleton()
@@ -1917,9 +2233,36 @@ class SkeletonViewer3D(QtInteractor):
 # DIALOG WINDOWS
 # =============================================================================
 
+class SetupGuideDialog(QDialog):
+    """Read-only setup & recording guide. Renders SETUP_GUIDE_SECTIONS as tabs.
+    Content lives in that data structure; this class only displays it."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(Lang.get('guide_title'))
+        self.resize(720, 640)
+
+        if parent is not None:
+            self.setStyleSheet(parent.styleSheet())
+
+        layout = QVBoxLayout(self)
+
+        sections = SETUP_GUIDE_SECTIONS_KO if Lang.CURRENT == 'KO' else SETUP_GUIDE_SECTIONS
+        tabs = QTabWidget()
+        for section in sections:
+            page = QTextBrowser()
+            page.setOpenExternalLinks(True)
+            page.setHtml(section["body"])
+            tabs.addTab(page, section["title"])
+        layout.addWidget(tabs)
+
+        btn = QPushButton(Lang.get('acknowledge_close'))
+        btn.setObjectName("AccentButton")
+        btn.clicked.connect(self.accept)
+        layout.addWidget(btn)
+
 class CalibrationReviewDialog(QDialog):
     """Displays the generated checkerboard calibration images."""
-    def __init__(self, parent, session_path):
+    def __init__(self, parent, session_path, gate_mode=False):
         super().__init__(parent)
         self.setWindowTitle(Lang.get('calib_review'))
         self.resize(1000, 700)
@@ -1966,10 +2309,23 @@ class CalibrationReviewDialog(QDialog):
         scroll.setWidget(content)
         layout.addWidget(scroll)
         
-        btn = QPushButton(Lang.get('acknowledge_close'))
-        btn.setObjectName("AccentButton")
-        btn.clicked.connect(self.accept)
-        layout.addWidget(btn)
+        if gate_mode:
+            # Acting as a pre-pose gate: force a clear Continue / Cancel choice.
+            btn_row = QHBoxLayout()
+            btn_cancel = QPushButton(Lang.get('calib_reject'))
+            btn_cancel.clicked.connect(self.reject)
+            btn_continue = QPushButton(Lang.get('calib_continue'))
+            btn_continue.setObjectName("AccentButton")
+            btn_continue.clicked.connect(self.accept)
+            btn_row.addWidget(btn_cancel)
+            btn_row.addWidget(btn_continue)
+            layout.addLayout(btn_row)
+        else:
+            # Passive end-of-run viewer: single close button.
+            btn = QPushButton(Lang.get('acknowledge_close'))
+            btn.setObjectName("AccentButton")
+            btn.clicked.connect(self.accept)
+            layout.addWidget(btn)
 
 class PipelineConfigDialog(QDialog):
     """Configuration dialog for pipeline execution."""
@@ -2467,7 +2823,7 @@ class OpenCapPro(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.current_version = "v2.2.2"
+        self.current_version = "v2.2.3"
         self.github_releases_url = "https://github.com/driscollh/opencap-offline/releases/latest"
         
         # Initialize paths
@@ -2757,6 +3113,10 @@ class OpenCapPro(QMainWindow):
         self.about_action = QAction(Lang.get('about_menu'), self)
         self.about_action.triggered.connect(self._show_about)
         self.help_menu.addAction(self.about_action)
+        guide_action = QAction(Lang.get('guide_title'), self)
+        guide_action.triggered.connect(self._show_setup_guide)
+        self.help_menu.addAction(guide_action)
+
 
     def toggle_language(self):
         """Swaps the global language state and forces a UI refresh."""
@@ -3242,6 +3602,7 @@ class OpenCapPro(QMainWindow):
         self._add_to_recent(session_name)
         self.refresh_cam_slots(session_name)
         self.refresh_tree(session_name)
+        self.skeleton_viewer.apply_session_floor(self.data_dir / session_name)
         
         self._update_status(f"Loaded session: {session_name}")
         self.session_status_label.setText(f"Session: {session_name}")
@@ -3688,16 +4049,6 @@ class OpenCapPro(QMainWindow):
             self.log_box.append(f">>> ERROR: {message}")
             QMessageBox.critical(self, Lang.get('calib_failed'), f"Error: {message}")
 
-    def _execute_intrinsics_thread(self, func, session_name):
-        try:
-            # This calls the logic in generate_intrinsics.py
-            func(session_name)
-            self.root.after(0, lambda: messagebox.showinfo("Done", "Intrinsics Calibration Complete!"))
-        except Exception as e:
-            self.root.after(0, lambda: messagebox.showerror("Error", f"Calibration failed: {e}"))
-        finally:
-            self.root.after(0, lambda: self.btn_intrinsics.config(state=tk.NORMAL, text="A. GENERATE INTRINSICS"))
-    
     def run_pipeline(self, step="all") -> None:
         session = self.session_combo.currentText()
         if not session: 
@@ -3745,24 +4096,6 @@ class OpenCapPro(QMainWindow):
             
         config = dlg.get_data()
         
-        # --- NEW: High-Resolution Warning ---
-        if config.get("pose_estimator") == "openpose" and config.get("res") == "1x736":
-            reply = QMessageBox.question(
-                self,
-                "Performance Warning",
-                "Processing with OpenPose at 1x736 resolution is highly memory-intensive.\n\n"
-                "If the video contains a large amount of vertical background clutter (tables, chairs, tripods), "
-                "the algorithm may experience combinatorial explosion, massively increasing processing time.\n\n"
-                "Do you wish to proceed?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
-            
-            if reply == QMessageBox.No:
-                self.log_box.append(">>> Pipeline cancelled by user (Resolution Warning).")
-                return
-        # ------------------------------------
-        
         self.current_pipeline_config = {
             "session": session,
             "args": config,
@@ -3771,7 +4104,8 @@ class OpenCapPro(QMainWindow):
 
         self._start_pipeline_process(session, config, step=step)
 
-    def _start_pipeline_process(self, session, config, step="all", resume_file=None):
+    def _start_pipeline_process(self, session, config, step="all", resume_file=None, skip_calibration=False):
+        self.current_run_skips_calib = skip_calibration
         self.process = QProcess()
         self.process.setProcessChannelMode(QProcess.MergedChannels)
         self.process.readyReadStandardOutput.connect(self._handle_stdout)
@@ -3786,6 +4120,8 @@ class OpenCapPro(QMainWindow):
             "--pose_estimator", config.get("pose_estimator", "openpose").lower(), 
             "--trials"
         ] + config["trials"]
+        if skip_calibration:
+            script_args.append("--skip_calibration")
             
         self.log_box.clear()
         self.log_box.append(f">>> Executing {config.get('pose_estimator').upper()}: {' '.join(script_args)}")
@@ -3807,12 +4143,36 @@ class OpenCapPro(QMainWindow):
             self._handle_subject_selection()
             return
 
+        if exit_code == 6:
+            self.log_box.append("\n>>> Calibration complete — review before pose estimation.")
+            session = self.current_pipeline_config['session']
+            calib_dir = self.data_dir / session / "CalibrationImages"
+            approved = True
+            if calib_dir.exists() and any(calib_dir.iterdir()):
+                dlg = CalibrationReviewDialog(self, self.data_dir / session, gate_mode=True)
+                approved = (dlg.exec_() == QDialog.Accepted)
+            if approved:
+                self.log_box.append(">>> Calibration approved. Continuing to pose estimation...")
+                self._start_pipeline_process(
+                    session,
+                    self.current_pipeline_config['args'],
+                    step="all",
+                    skip_calibration=True
+                )
+            else:
+                self.log_box.append(">>> Calibration rejected. Pipeline stopped.")
+            return
+
         if exit_code == 0:
             self.log_box.append("\n>>> SUCCESS: Pipeline Finished.")
 
+            # Refresh the file tree so new/changed videos and outputs show up
+            self.refresh_tree(self.current_pipeline_config['session'])
+            self.skeleton_viewer.apply_session_floor(self.data_dir / self.current_pipeline_config['session'])
+
             # --- NEW: Show Calibration Images ---
             current_step = self.current_pipeline_config.get("step", "all")
-            if current_step in ["calibrate", "all"]:
+            if current_step in ["calibrate", "all"] and not getattr(self, 'current_run_skips_calib', False):
                 self.show_calib_cb.setEnabled(True)
                 session = self.current_pipeline_config['session']
                 calib_dir = self.data_dir / session / "CalibrationImages"
@@ -4046,6 +4406,10 @@ class OpenCapPro(QMainWindow):
             "<li>Synchronized video playback</li>"
             "</ul>"
         )
+
+    def _show_setup_guide(self):
+        dlg = SetupGuideDialog(self)
+        dlg.exec_()
 
     def manual_update_check(self):
         """Manually ping GitHub for the latest release version."""

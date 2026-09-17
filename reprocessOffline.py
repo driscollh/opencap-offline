@@ -12,7 +12,6 @@ import cv2
 import yaml
 import argparse
 import traceback
-import generate_intrinsics
 
 from utilsTracking import generate_tracking_data, purge_excluded_subjects, render_purged_video
 
@@ -25,6 +24,7 @@ def get_args():
     parser.add_argument("--trials", nargs='+', required=True)
     parser.add_argument("--step", default="all")
     parser.add_argument("--exclusion_file", default=None)
+    parser.add_argument("--skip_calibration", action="store_true")
     
     # --- DYNAMIC DLC CHECK ---
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -385,7 +385,7 @@ def sanitize_video_file(session_path, trial_name):
             try: 
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 print(f"    [CLEAN] Generated clean MP4: {os.path.basename(mp4_path)}")
-            except: 
+            except Exception: 
                 print(f"    [ERROR] FFmpeg failed. Restoring backup.")
                 shutil.move(backup_path, raw_vid)
 
@@ -475,7 +475,7 @@ def generate_missing_pickles(session_path, trial_name, pose_folder_name, is_stat
             try:
                 with open(jf) as f: d = json.load(f)
                 frames_list.append(d['people'] if 'people' in d and d['people'] else [{'pose_keypoints_2d': [0]*75}])
-            except: frames_list.append([{'pose_keypoints_2d': [0]*75}])
+            except Exception: frames_list.append([{'pose_keypoints_2d': [0]*75}])
         
         if is_static and frames_list:
             kp_array = []
@@ -571,7 +571,7 @@ def run_offline_pipeline():
     if step in ["all", "calibrate", "pose", "kinematics"]:
         ensure_session_resources(session_path, TRIALS, pose_folder_name)
         
-    if step in ["all", "calibrate"]:
+    if step in ["all", "calibrate"] and not args.skip_calibration:
         # 1. Explicitly check for and create the CalibrationImages folder
         calib_out = os.path.join(session_path, 'CalibrationImages')
         os.makedirs(calib_out, exist_ok=True)
@@ -579,6 +579,10 @@ def run_offline_pipeline():
         
         # 2. Run the ACTUAL extrinsics calibration function
         run_auto_calibration(session_path)
+
+    if step == "all" and not args.skip_calibration:
+        print("%%STATUS: Calibration complete. Awaiting review.")
+        sys.exit(6)
 
     if step in ["all", "pose", "kinematics"]:
         for trial in TRIALS:

@@ -14,7 +14,6 @@
 
 import os 
 import glob
-import numpy as np
 import yaml
 import traceback
 import ffmpeg
@@ -27,14 +26,12 @@ from utils import getDataDirectory, getOpenPoseDirectory, getMMposeDirectory
 from utilsChecker import saveCameraParameters
 from utilsChecker import calcExtrinsicsFromVideo
 from utilsChecker import isCheckerboardUpsideDown
-from utilsChecker import autoSelectExtrinsicSolution
 from utilsChecker import triangulateMultiviewVideo
 from utilsChecker import writeTRCfrom3DKeypoints
 from utilsChecker import popNeutralPoseImages
 from utilsChecker import rotateIntrinsics as legacyRotateIntrinsics
 from utilsChecker import calcIntrinsics, video2Images, getVideoRotation
 from utilsSync import synchronizeVideos
-from utilsDetector  import runPoseDetector
 from utilsAugmenter import augmentTRC
 from utilsOpenSim import runScaleTool, getScaleTimeRange, runIKTool, generateVisualizerJson
 from defaults import DEFAULT_SYNC_VER
@@ -352,6 +349,14 @@ def main(sessionName, trialName, trial_id, cameras_to_use=['all'],
         vertical_offset = augmentTRC(pathOutputFiles[trialName], sessionMetadata['mass_kg'], sessionMetadata['height_m'], 
                                      pathAugmentedOutputFiles[trialName], os.path.join(baseDir, "MarkerAugmenter"), 
                                      augmenterModelName=augmenterModelName, augmenter_model=augmenterModel, offset=offset)
+        if trialName.lower() in ("neutral", "static"):
+            floor_offset = min(0.0, float(vertical_offset) - 0.01)   # vertical_offset here is the real min_y_pos
+            meta_path = os.path.join(sessionDir, 'sessionMetadata.yaml')
+            meta = importMetadata(meta_path)
+            meta['visualizerFloorOffset'] = floor_offset
+            with open(meta_path, 'w') as f:
+                yaml.dump(meta, f, default_flow_style=False, sort_keys=False)
+
         if offset:
             vertical_offset = 0.01   
         

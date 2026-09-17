@@ -288,7 +288,7 @@ def getScaleTimeRange(pathTRCFile, thresholdPosition=0.005, thresholdTime=0.3,
         try:
             root_data = c_trc_file.marker('midHip')
             trc_data -= np.tile(root_data,len(markers))
-        except:
+        except Exception:
             pass
    
     if np.max(trc_data)>10: # in mm, turn to m
@@ -627,7 +627,7 @@ def generateVisualizerJson(modelPath,ikPath,jsonOutputPath,statesInDegrees=True,
     stateTime = stateTable.getIndependentColumn()
     try:
         inDegrees = stateTable.getTableMetaDataAsString('inDegrees') == 'yes'
-    except:
+    except Exception:
         inDegrees = statesInDegrees
         print('using statesInDegrees variable, which says statesInDegrees is ' + str(statesInDegrees))
     q = np.zeros((len(stateTime),nCoords))

@@ -372,7 +372,7 @@ def synchronizeVideoKeypoints(keypointList, confidenceList,
     # trial to be considered a gait trial.
     try:
         isGait = detectGaitAllVideos(mkrSpeedList,allMarkerList,confSyncList,markers4Ankles,sampleFreq)
-    except:
+    except Exception:
         isGait = False
         print('Detect gait activity algorithm failed.')
     
@@ -775,7 +775,7 @@ def clean2Dkeypoints(key2D, confidence, confidenceThreshold=0.5, nCams=2,
                         key2D_out[i,:,j] = pchip_interpolate(
                             x(~nans), key2D_out[i,~nans,j], 
                             np.arange(key2D_out.shape[1]))    
-                    except:
+                    except Exception:
                         key2D_out[i,nans,j] = np.interp(x(nans), x(~nans), 
                                                         key2D_out[i,~nans,j])
                         
