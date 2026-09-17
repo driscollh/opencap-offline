@@ -2823,7 +2823,7 @@ class OpenCapPro(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.current_version = "v2.2.3"
+        self.current_version = "v2.2.4"
         self.github_releases_url = "https://github.com/driscollh/opencap-offline/releases/latest"
         
         # Initialize paths
