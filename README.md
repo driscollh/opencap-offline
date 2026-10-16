@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22804217.svg)](https://doi.org/10.5281/zenodo.22804217)
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
+[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
 
 A fully offline, localized implementation of Stanford NMBL's OpenCap. This version adapts the original cloud-based processing pipeline to run entirely on a local machine, ensuring strict data privacy and allowing for use in environments without internet access.
 This version of the software requires a sufficiently powerful GPU, but cannot run on blackwell architecture cards (i.e. Nvidia 50-series cards). 
