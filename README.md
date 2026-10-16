@@ -1,6 +1,6 @@
 # OpenCap-Offline
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19562446.svg)](https://doi.org/10.5281/zenodo.19562446)  
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22804217.svg)](https://doi.org/10.5281/zenodo.22804217)
   
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/driscollh)
 
